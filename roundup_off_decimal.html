@@ -37,7 +37,13 @@
             <span>生命:</span>
             <div id="livesContainer" class="flex gap-1 text-red-500">❤ ❤ ❤️</div>
         </div>
-        <div class="pointer-events-auto flex items-center gap-3">
+        <div class="pointer-events-auto flex items-center gap-2">
+            <button id="bgmToggleBtn" class="bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/50 px-2 py-1 rounded-lg text-xs pixel-font cursor-pointer flex items-center gap-1 shadow-md">
+                🎵 背景音樂: 開
+            </button>
+            <button id="soundToggleBtn" class="bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/50 px-2 py-1 rounded-lg text-xs pixel-font cursor-pointer flex items-center gap-1 shadow-md">
+                🔊 音效: 開
+            </button>
             <button id="openShopBtn" class="bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-white px-3 py-1 rounded-lg text-xs pixel-font shadow-[0_0_10px_rgba(245,158,11,0.5)] cursor-pointer">
                 🛍️ 積分商店
             </button>
@@ -97,12 +103,8 @@
         </div>
         <div id="questionText" class="text-white text-base md:text-xl font-bold tracking-wide py-2 text-center w-full max-w-4xl">載入題目中...</div>
         
-        <!-- Answer Options Container (Multiple Choice) -->
-        <div id="optionsContainer" class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2 w-full max-w-4xl hidden">
-            <!-- Dynamically populated buttons -->
-        </div>
+        <div id="optionsContainer" class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2 w-full max-w-4xl hidden"></div>
 
-        <!-- Input Container (Short Answer) -->
         <div id="inputContainer" class="flex gap-3 mt-2 w-full max-w-md hidden">
             <input type="text" id="answerInput" placeholder="請在此輸入答案 (例如: 58.2 或 12.5)" class="flex-1 bg-slate-900 border-2 border-cyan-500/70 rounded-xl px-4 py-2 text-white text-sm md:text-base focus:outline-none focus:border-cyan-400">
             <button id="submitAnswerBtn" class="pixel-font bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white px-6 py-2 rounded-xl text-xs md:text-sm shadow-lg cursor-pointer">
@@ -161,6 +163,168 @@
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+
+        // Web Audio Sound Engine
+        let audioCtx = null;
+        let soundEnabled = true;
+        let bgmEnabled = true;
+        let bgmInterval = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // Procedural Sound Effects
+        const SoundFX = {
+            playLaser() {
+                if (!soundEnabled) return;
+                initAudio();
+                try {
+                    let osc = audioCtx.createOscillator();
+                    let gain = audioCtx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.12);
+                    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.12);
+                } catch(e) {}
+            },
+            playExplosion() {
+                if (!soundEnabled) return;
+                initAudio();
+                try {
+                    let bufferSize = audioCtx.sampleRate * 0.3;
+                    let buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                    let data = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        data[i] = Math.random() * 2 - 1;
+                    }
+                    let noise = audioCtx.createBufferSource();
+                    noise.buffer = buffer;
+                    let filter = audioCtx.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(600, audioCtx.currentTime);
+                    filter.frequency.linearRampToValueAtTime(50, audioCtx.currentTime + 0.3);
+                    let gain = audioCtx.createGain();
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                    noise.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    noise.start();
+                } catch(e) {}
+            },
+            playHit() {
+                if (!soundEnabled) return;
+                initAudio();
+                try {
+                    let osc = audioCtx.createOscillator();
+                    let gain = audioCtx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.25);
+                    gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.25);
+                } catch(e) {}
+            },
+            playCorrect() {
+                if (!soundEnabled) return;
+                initAudio();
+                try {
+                    let now = audioCtx.currentTime;
+                    let osc = audioCtx.createOscillator();
+                    let gain = audioCtx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.setValueAtTime(659.25, now + 0.1);
+                    osc.frequency.setValueAtTime(880, now + 0.2);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                } catch(e) {}
+            },
+            playWrong() {
+                if (!soundEnabled) return;
+                initAudio();
+                try {
+                    let now = audioCtx.currentTime;
+                    let osc = audioCtx.createOscillator();
+                    let gain = audioCtx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(200, now);
+                    osc.frequency.setValueAtTime(140, now + 0.15);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } catch(e) {}
+            }
+        };
+
+        // Procedural Ambient Space BGM (Arpeggiated Synth Loop)
+        function startBGM() {
+            if (bgmInterval) clearInterval(bgmInterval);
+            const notes = [220, 246.94, 277.18, 329.63, 392.00, 440];
+            let noteIdx = 0;
+            bgmInterval = setInterval(() => {
+                if (!bgmEnabled || !soundEnabled || !audioCtx) return;
+                try {
+                    let osc = audioCtx.createOscillator();
+                    let gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(notes[noteIdx % notes.length], audioCtx.currentTime);
+                    gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.4);
+                    noteIdx++;
+                } catch(e) {}
+            }, 300);
+        }
+
+        function stopBGM() {
+            if (bgmInterval) {
+                clearInterval(bgmInterval);
+                bgmInterval = null;
+            }
+        }
+
+        const soundToggleBtn = document.getElementById('soundToggleBtn');
+        soundToggleBtn.addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            soundToggleBtn.textContent = soundEnabled ? '🔊 音效: 開' : '🔇 音效: 關';
+        });
+
+        const bgmToggleBtn = document.getElementById('bgmToggleBtn');
+        bgmToggleBtn.addEventListener('click', () => {
+            bgmEnabled = !bgmEnabled;
+            bgmToggleBtn.textContent = bgmEnabled ? '🎵 背景音樂: 開' : '🔇 背景音樂: 關';
+            if (!bgmEnabled) {
+                stopBGM();
+            } else if (gameState === 'PLAYING') {
+                startBGM();
+            }
+        });
 
         const startScreen = document.getElementById('startScreen');
         const gameOverScreen = document.getElementById('gameOverScreen');
@@ -233,7 +397,6 @@
         let particles = [];
         let stars = [];
 
-        // 6 Shop Ships & 6 Backgrounds (10+ total)
         let shopData = {
             ships: [
                 { id: 'default', name: '預設藍焰', price: 0, color: '#06b6d4', unlocked: true },
@@ -375,6 +538,7 @@
         let mouseX = canvas.width / 2;
 
         window.addEventListener('keydown', e => {
+            initAudio();
             if (gameMode === 'CLASSIC') {
                 if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.ArrowLeft = true;
                 if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.ArrowRight = true;
@@ -398,6 +562,7 @@
         });
 
         canvas.addEventListener('touchmove', e => {
+            initAudio();
             if (gameMode === 'CLASSIC' && e.touches.length > 0) {
                 touchX = e.touches[0].clientX;
             }
@@ -405,6 +570,7 @@
         }, { passive: false });
 
         canvas.addEventListener('touchstart', e => {
+            initAudio();
             if (gameMode === 'CLASSIC' && e.touches.length > 0) {
                 touchX = e.touches[0].clientX;
             }
@@ -476,6 +642,7 @@
                 let foundShip = shopData.ships.find(s => s.id === currentShip);
                 if (foundShip) bulletColor = foundShip.color;
                 bullets.push(new Bullet(this.x + this.width / 2 - 3, this.y, 0, -14, bulletColor));
+                SoundFX.playLaser();
             }
 
             draw() {
@@ -715,6 +882,7 @@
         }
 
         function createExplosion(x, y, color) {
+            SoundFX.playExplosion();
             for (let i = 0; i < 15; i++) {
                 particles.push({
                     x: x,
@@ -728,7 +896,6 @@
             }
         }
 
-        // Expanded Stage 1 (Applied Short Answers with extended currency, mass, length, distance units)
         const rawStage1Bank = [
             { q: "將金額 $58.24 取至角", correct: "58.2", tip: "取至角即十分位。$58.24 的百分位是 4 (< 5)，故捨去得 $58.2。" },
             { q: "將金額 $103.76 取至角", correct: "103.8", tip: "取至角即十分位。$103.76 的百分位是 6 (>= 5)，故進位得 $103.8。" },
@@ -744,7 +911,6 @@
             { q: "將長度 19.37 m 取至十分位", correct: "19.4", tip: "取至十分位。百分位是 7 (>= 5)，故進位得 19.4 m。" }
         ];
 
-        // Expanded Stage 2 (Place Value identification)
         const rawStage2Bank = [
             { q: "2 ÷ 7 = 0.29，這小數是取至甚麼位值？", options: ["個位", "十位", "十分位", "百分位"], correct: "百分位", tip: "0.29 小數點後第二位是 9，代表百分位。" },
             { q: "4 ÷ 9 = 0.44，這小數是取至甚麼位值？", options: ["個位", "十分位", "百分位", "萬分位"], correct: "百分位", tip: "0.44 小數點後第二位是 4，代表百分位。" },
@@ -756,7 +922,6 @@
             { q: "2 ÷ 9 = 0.22，這小數是取至甚麼位值？", options: ["個位", "十分位", "百分位", "千分位"], correct: "百分位", tip: "0.22 小數點後第二位是 2，代表百分位。" }
         ];
 
-        // Expanded Stage 3 (Multiple Choice Rounding Calculations)
         const rawStage3Bank = [
             { q: "2 ÷ 7 = 0.29，為了取至百分位，我需要用直式計算到哪一個數位？", options: ["個位", "小數點後兩位", "小數點後三位", "十位"], correct: "小數點後三位", tip: "取至百分位（小數點後兩位）時，我們必須計算到下一位（即千分位／小數點後三位），透過該數字判斷是「四捨」還是「五入」。" },
             { q: "1 ÷ 7 (答案取至百分位)", correct: "0.14", tip: "1 ÷ 7 = 0.142... 取至百分位為 0.14。" },
@@ -768,21 +933,16 @@
             { q: "5 ÷ 9 (答案取至百分位)", correct: "0.56", tip: "5 ÷ 9 = 0.555... 取至百分位為 0.56。" }
         ];
 
-        // Expanded Stage 4 (Composed of at least 3 from Stage 1, 3 from Stage 2, 3 from Stage 3 + unique advanced thousandths)
         const rawStage4Bank = [
-            // 3 from Stage 1 (Short Answer applied format)
             { q: "將金額 $142.86 取至角", correct: "142.9", tip: "取至角即十分位。$142.86 的百分位是 6 (>= 5)，故進位得 $142.9。" },
             { q: "將重量 24.13 kg 取至十分位", correct: "24.1", tip: "取至十分位。24.13 的百分位是 3 (< 5)，故捨去得 24.1 kg。" },
             { q: "將長度 36.95 m 取至十分位", correct: "37.0", tip: "取至十分位。36.95 的百分位是 5 (>= 5)，故進位得 37.0 m。" },
-            // 3 from Stage 2 (Place Value identification format)
             { q: "3 ÷ 7 = 0.428，這小數是取至甚麼位值？", options: ["個位", "十分位", "百分位", "千分位"], correct: "千分位", tip: "0.428 小數點後第三位是 8，代表千分位。" },
             { q: "5 ÷ 9 = 0.556，這小數是取至甚麼位值？", options: ["個位", "十分位", "百分位", "千分位"], correct: "千分位", tip: "0.556 小數點後第三位是 6，代表千分位。" },
             { q: "3 ÷ 7 = 0.43，這小數是取至甚麼位值？", options: ["個位", "十分位", "百分位", "千分位"], correct: "百分位", tip: "0.43 小數點後第二位是 3，代表百分位。" },
-            // 3 from Stage 3 (Multiple Choice calculation format)
             { q: "3 ÷ 7 (答案取至百分位)", options: ["0.43", "0.44", "0.42", "0.45"], correct: "0.43", tip: "3 ÷ 7 = 0.428... 取至百分位為 0.43。" },
             { q: "2 ÷ 9 (答案取至百分位)", options: ["0.22", "0.23", "0.21", "0.25"], correct: "0.22", tip: "2 ÷ 9 = 0.222... 取至百分位為 0.22。" },
             { q: "4 ÷ 9 (答案取至百分位)", options: ["0.44", "0.45", "0.43", "0.40"], correct: "0.44", tip: "4 ÷ 9 = 0.444... 取至百分位為 0.44。" },
-            // Additional unique advanced thousandths question to complete 10
             { q: "將 15.8889 取至千分位", correct: "15.889", tip: "萬分位是 9 (>= 5)，向前進位得 15.889。" }
         ];
 
@@ -796,7 +956,6 @@
         }
 
         function initSessionQuestions() {
-            // Pick non-overlapping distributed questions for Stage 1, 2, 3 (e.g. 5 each) and Stage 4 (10 questions)
             sessionQuestions = {
                 stage1: shuffleArray(rawStage1Bank).slice(0, 5),
                 stage2: shuffleArray(rawStage2Bank).slice(0, 5),
@@ -821,6 +980,8 @@
                     return;
                 } else {
                     gameState = 'GAMEOVER';
+                    stopBGM();
+                    SoundFX.playCorrect();
                     gameOverTitleEl.textContent = '🎉 恭喜通關！';
                     gameOverTipText.textContent = `太厲害了！你成功擊敗了所有 Boss 並精通所有 10 題高難度四捨五入！`;
                     finalScoreEl.textContent = score;
@@ -882,8 +1043,15 @@
             }
 
             if (isCorrect) {
+                SoundFX.playCorrect();
+                if (player) {
+                    player.shoot();
+                    setTimeout(() => { if (player) player.shoot(); }, 100);
+                    setTimeout(() => { if (player) player.shoot(); }, 200);
+                }
+
                 score += 200;
-                coins += 10; // Only Quiz Mode grants coins
+                coins += 10;
                 saveShopState();
                 scoreValEl.textContent = score;
                 coinValEl.textContent = `🪙 ${coins}`;
@@ -907,6 +1075,7 @@
                 }
                 loadQuestion();
             } else {
+                SoundFX.playWrong();
                 lastMistakeTip = currentQuestion.tip || `正確答案是: ${currentQuestion.correct}`;
                 lives--;
                 updateHUD();
@@ -939,6 +1108,8 @@
 
         function gameOver() {
             gameState = 'GAMEOVER';
+            stopBGM();
+            SoundFX.playHit();
             quizHud.classList.add('hidden');
             gameOverTitleEl.textContent = '遊戲結束';
             gameOverTipText.textContent = gameMode === 'QUIZ' ? `💡 錯題重點複習：\n${lastMistakeTip || '多練習十分位與百分位的四捨五入口訣！'}` : '經典射擊挑戰完畢！';
@@ -949,7 +1120,6 @@
             }
             highScoreEl.textContent = highScore;
 
-            // Check Hidden Achievements
             achievementBadgeContainer.innerHTML = '';
             let badgesHTML = '';
             if (score >= 15000 && !hasAchievement15k) {
@@ -975,6 +1145,10 @@
         }
 
         function startGame(mode) {
+            initAudio();
+            if (bgmEnabled) {
+                startBGM();
+            }
             gameMode = mode;
             gameState = 'PLAYING';
             score = 0;
@@ -1023,6 +1197,7 @@
 
         function returnToMenu() {
             gameState = 'START';
+            stopBGM();
             quizHud.classList.add('hidden');
             gameOverScreen.classList.add('hidden');
             classicMenuBtn.classList.add('hidden');
@@ -1032,7 +1207,6 @@
         function gameLoop() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Background Theme
             let bgConfig = shopData.backgrounds.find(b => b.id === currentBg);
             let gradColors = bgConfig ? bgConfig.gradient : ['#101026', '#020208'];
             let bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
@@ -1041,7 +1215,6 @@
             ctx.fillStyle = bgGrad;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Stars
             ctx.fillStyle = '#ffffff';
             stars.forEach(s => {
                 s.y += s.speed;
@@ -1074,7 +1247,6 @@
                 }
 
                 if (gameMode === 'CLASSIC') {
-                    // Check score-based boss triggers
                     [100, 1500, 2000, 2500].forEach(threshold => {
                         if (score >= threshold && !triggeredScoreBosses[threshold] && classicBosses.length === 0) {
                             triggeredScoreBosses[threshold] = true;
@@ -1093,6 +1265,7 @@
 
                         if (player && cb.x < player.x + player.width && cb.x + cb.width > player.x &&
                             cb.y < player.y + player.height && cb.y + cb.height > player.y) {
+                            SoundFX.playHit();
                             createExplosion(player.x + player.width/2, player.y + player.height/2, '#ef4444');
                             lives--;
                             updateHUD();
@@ -1109,7 +1282,7 @@
                                 if (cb.hp <= 0) {
                                     createExplosion(cb.x + cb.width/2, cb.y + cb.height/2, '#ef4444');
                                     classicBosses.splice(i, 1);
-                                    score += 1000; // Classic Mode does NOT grant coins
+                                    score += 1000;
                                     updateHUD();
                                 }
                                 break;
@@ -1126,6 +1299,7 @@
                             if (player && player.invulnerableTimer <= 0 &&
                                 eb.x < player.x + player.width && eb.x + eb.width > player.x &&
                                 eb.y < player.y + player.height && eb.y + eb.height > player.y) {
+                                SoundFX.playHit();
                                 createExplosion(player.x + player.width / 2, player.y + player.height / 2, '#ef4444');
                                 enemyBullets.splice(i, 1);
                                 lives--;
@@ -1148,6 +1322,7 @@
 
                         if (player && player.x < en.x + en.width && player.x + player.width > en.x &&
                             player.y < en.y + en.height && player.y + player.height > en.y) {
+                            SoundFX.playHit();
                             createExplosion(en.x + en.width/2, en.y + en.height/2, '#ef4444');
                             enemies.splice(i, 1);
                             lives--;
@@ -1171,7 +1346,7 @@
                                 if (en.hp <= 0) {
                                     createExplosion(en.x + en.width/2, en.y + en.height/2, '#ef4444');
                                     enemies.splice(i, 1);
-                                    score += 150; // Classic Mode does NOT grant coins
+                                    score += 150;
                                     updateHUD();
                                 }
                                 break;
@@ -1185,7 +1360,6 @@
                     }
                 }
 
-                // Bullets
                 for (let i = bullets.length - 1; i >= 0; i--) {
                     let b = bullets[i];
                     b.update();
@@ -1193,7 +1367,6 @@
                     if (b.y < -20) bullets.splice(i, 1);
                 }
 
-                // Particles
                 for (let i = particles.length - 1; i >= 0; i--) {
                     let p = particles[i];
                     p.x += p.vx;
