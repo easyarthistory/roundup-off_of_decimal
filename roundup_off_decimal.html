@@ -37,7 +37,7 @@
         </div>
         <div class="flex items-center gap-1 pointer-events-auto">
             <span class="hidden sm:inline">生命:</span>
-            <div id="livesContainer" class="flex gap-0.5 text-red-500 text-xs">❤ ❤ ❤️</div>
+            <div id="livesContainer" class="flex gap-0.5 text-red-500 text-xs">❤ ❤ ❤️️</div>
         </div>
         <div class="pointer-events-auto flex items-center gap-1.5 md:gap-2">
             <button id="bgmToggleBtn" class="bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/50 px-1.5 py-0.5 rounded text-[10px] md:text-xs cursor-pointer shadow-md">
@@ -58,7 +58,7 @@
         <!-- Start Screen -->
         <div id="startScreen" class="absolute inset-0 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center z-20 text-center p-4">
             <h1 class="pixel-font text-2xl md:text-5xl text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 mb-3 animate-pulse">星際戰機</h1>
-            <p class="text-gray-300 mb-5 text-xs md:text-base max-w-md">支援電腦、iPad 與手機！選擇經典射擊挑戰 Boss 襲擊，或透過「Boss 答題射擊模式」挑戰四捨五入與應用短答題，賺取金幣解鎖 10+ 種主題外觀與飛船！</p>
+            <p class="text-gray-300 mb-5 text-xs md:text-base max-w-md">支援電腦、iPad 與手機！手指滑動或滑鼠拖曳操控飛船。選擇經典射擊挑戰，或透過「Boss 答題射擊模式」挑戰四捨五入與應用短答題，發射飛彈擊中 Boss！</p>
             
             <div class="flex flex-col sm:flex-row gap-3 w-full max-w-sm justify-center">
                 <button id="startClassicBtn" class="pixel-font bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 text-white px-4 py-2.5 rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.5)] text-xs md:text-sm cursor-pointer">
@@ -90,16 +90,6 @@
                     返回主選單
                 </button>
             </div>
-        </div>
-    </div>
-
-    <div id="touchControls" class="absolute bottom-2 left-0 right-0 flex justify-between items-center px-4 pointer-events-none z-20 md:hidden">
-        <div class="flex gap-2 pointer-events-auto">
-            <button id="touchLeft" class="w-14 h-14 bg-slate-800/80 active:bg-cyan-500/60 border border-cyan-500 rounded-full text-cyan-300 text-xl flex items-center justify-center shadow-lg">◀</button>
-            <button id="touchRight" class="w-14 h-14 bg-slate-800/80 active:bg-cyan-500/60 border border-cyan-500 rounded-full text-cyan-300 text-xl flex items-center justify-center shadow-lg">▶</button>
-        </div>
-        <div class="pointer-events-auto">
-            <button id="touchShoot" class="w-16 h-16 bg-cyan-600/80 active:bg-cyan-400 border-2 border-cyan-300 rounded-full text-white font-bold text-xs pixel-font flex items-center justify-center shadow-lg">發射</button>
         </div>
     </div>
 
@@ -376,10 +366,6 @@
         const hintBtn = document.getElementById('hintBtn');
         const hintModal = document.getElementById('hintModal');
         const closeHintBtn = document.getElementById('closeHintBtn');
-        const touchControls = document.getElementById('touchControls');
-        const touchLeft = document.getElementById('touchLeft');
-        const touchRight = document.getElementById('touchRight');
-        const touchShoot = document.getElementById('touchShoot');
 
         let gameState = 'START';
         let gameMode = 'CLASSIC';
@@ -547,8 +533,6 @@
         window.addEventListener('resize', resizeCanvas);
 
         const keys = { ArrowLeft: false, ArrowRight: false, Space: false };
-        let touchMoveLeft = false;
-        let touchMoveRight = false;
         let touchX = null;
         let isMouseDown = false;
         let mouseX = canvas.width / 2;
@@ -569,12 +553,6 @@
                 if (e.code === 'Space') keys.Space = false;
             }
         });
-
-        touchLeft.addEventListener('touchstart', () => { touchMoveLeft = true; initAudio(); });
-        touchLeft.addEventListener('touchend', () => { touchMoveLeft = false; });
-        touchRight.addEventListener('touchstart', () => { touchMoveRight = true; initAudio(); });
-        touchRight.addEventListener('touchend', () => { touchMoveRight = false; });
-        touchShoot.addEventListener('touchstart', () => { if (player && gameMode === 'CLASSIC') player.shoot(); initAudio(); });
 
         canvas.addEventListener('mousemove', e => {
             if (gameMode === 'CLASSIC') {
@@ -630,15 +608,15 @@
 
             update() {
                 if (gameMode === 'CLASSIC') {
-                    if (keys.ArrowLeft || touchMoveLeft) this.x -= this.speed;
-                    if (keys.ArrowRight || touchMoveRight) this.x += this.speed;
+                    if (keys.ArrowLeft) this.x -= this.speed;
+                    if (keys.ArrowRight) this.x += this.speed;
 
                     if (touchX !== null) {
                         const dx = touchX - (this.x + this.width / 2);
-                        this.x += dx * 0.2;
+                        this.x += dx * 0.25;
                     } else if (isMouseDown && mouseX !== undefined) {
                         const dx = mouseX - (this.x + this.width / 2);
-                        this.x += dx * 0.15;
+                        this.x += dx * 0.2;
                     }
 
                     if (this.x < 10) this.x = 10;
@@ -937,7 +915,7 @@
         ];
 
         const rawStage3Bank = [
-            { q: "2 ÷ 7 = 0.29，為了取至百分位，我需要用直式計算到哪一個數位？", options: ["個位", "小數點後兩位", "小數點後三位", "十位"], correct: "小數點後三位", tip: "取至百分位時，我們必須計算到下一位（即千分位／小數點後三位）以進行四捨五入。" },
+            { q: "2 ÷ 7 = 0.29，為了取至百分位，我需要用直式計算到哪一個數位？", correct: "小數點後三位", tip: "取至百分位時，我們必須計算到下一位（即千分位／小數點後三位）以進行四捨五入。" },
             { q: "1 ÷ 7 (答案取至百分位)", correct: "0.14", tip: "1 ÷ 7 = 0.142... 取至百分位為 0.14。" },
             { q: "2 ÷ 7 (答案取至百分位)", correct: "0.29", tip: "2 ÷ 7 = 0.285... 取至百分位為 0.29。" },
             { q: "4 ÷ 7 (答案取至百分位)", correct: "0.57", tip: "4 ÷ 7 = 0.571... 取至百分位為 0.57。" },
@@ -1198,11 +1176,9 @@
 
             if (gameMode === 'CLASSIC') {
                 quizHud.classList.add('hidden');
-                touchControls.classList.remove('hidden');
                 classicMenuBtn.classList.remove('hidden');
             } else {
                 quizHud.classList.remove('hidden');
-                touchControls.classList.add('hidden');
                 classicMenuBtn.classList.remove('hidden');
                 currentStage = 1;
                 questionIndex = 0;
@@ -1225,7 +1201,6 @@
             gameState = 'START';
             stopBGM();
             quizHud.classList.add('hidden');
-            touchControls.classList.add('hidden');
             gameOverScreen.classList.add('hidden');
             classicMenuBtn.classList.add('hidden');
             startScreen.classList.remove('hidden');
