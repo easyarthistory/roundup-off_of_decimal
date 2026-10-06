@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>星際戰機 - 經典與答題模式挑戰與積分商店</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
@@ -13,6 +13,8 @@
             user-select: none;
             background: #050515;
             overflow: hidden;
+            width: 100vw;
+            height: 100vh;
         }
         .pixel-font {
             font-family: 'Press Start 2P', monospace;
@@ -23,138 +25,148 @@
         }
     </style>
 </head>
-<body class="text-white h-screen w-screen flex flex-col items-center justify-between relative select-none">
+<body class="text-white h-[100dvh] w-[100vw] flex flex-col items-center justify-between relative select-none overflow-hidden">
 
-    <div id="hud" class="absolute top-4 left-4 right-4 flex justify-between items-center pointer-events-none z-10 px-4 text-xs md:text-lg pixel-font text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]">
-        <div class="pointer-events-auto flex items-center gap-3">
+    <div id="hud" class="absolute top-2 left-2 right-2 flex justify-between items-center pointer-events-none z-10 px-2 text-[10px] md:text-sm pixel-font text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]">
+        <div class="pointer-events-auto flex items-center gap-1.5 md:gap-3 flex-wrap">
             <div>分數: <span id="scoreVal">0</span></div>
-            <div>最高: <span id="highScoreHudVal" class="text-yellow-400">0</span></div>
+            <div class="hidden sm:block">最高: <span id="highScoreHudVal" class="text-yellow-400">0</span></div>
             <div>金幣: <span id="coinVal" class="text-yellow-400">🪙 0</span></div>
-            <div>時間: <span id="timeVal" class="text-green-400">00:00</span></div>
-            <button id="classicMenuBtn" class="hidden bg-slate-800/80 hover:bg-slate-700 text-cyan-300 border border-cyan-500/50 px-2.5 py-1 rounded-lg text-[10px] md:text-xs cursor-pointer transition-all">返回主頁</button>
+            <div class="hidden md:block">時間: <span id="timeVal" class="text-green-400">00:00</span></div>
+            <button id="classicMenuBtn" class="hidden bg-slate-800/80 hover:bg-slate-700 text-cyan-300 border border-cyan-500/50 px-2 py-0.5 rounded text-[9px] md:text-xs cursor-pointer">返回主頁</button>
         </div>
-        <div class="flex items-center gap-2 pointer-events-auto">
-            <span>生命:</span>
-            <div id="livesContainer" class="flex gap-1 text-red-500">❤ ❤ ❤️</div>
+        <div class="flex items-center gap-1 pointer-events-auto">
+            <span class="hidden sm:inline">生命:</span>
+            <div id="livesContainer" class="flex gap-0.5 text-red-500 text-xs">❤ ❤ ❤️</div>
         </div>
-        <div class="pointer-events-auto flex items-center gap-2">
-            <button id="bgmToggleBtn" class="bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/50 px-2 py-1 rounded-lg text-xs pixel-font cursor-pointer flex items-center gap-1 shadow-md">
-                🎵 背景音樂: 開
+        <div class="pointer-events-auto flex items-center gap-1.5 md:gap-2">
+            <button id="bgmToggleBtn" class="bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/50 px-1.5 py-0.5 rounded text-[10px] md:text-xs cursor-pointer shadow-md">
+                🎵 音樂: 開
             </button>
-            <button id="soundToggleBtn" class="bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/50 px-2 py-1 rounded-lg text-xs pixel-font cursor-pointer flex items-center gap-1 shadow-md">
+            <button id="soundToggleBtn" class="bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/50 px-1.5 py-0.5 rounded text-[10px] md:text-xs cursor-pointer shadow-md">
                 🔊 音效: 開
             </button>
-            <button id="openShopBtn" class="bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-white px-3 py-1 rounded-lg text-xs pixel-font shadow-[0_0_10px_rgba(245,158,11,0.5)] cursor-pointer">
-                🛍️ 積分商店
+            <button id="openShopBtn" class="bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 text-white px-2 py-0.5 rounded text-[10px] md:text-xs pixel-font shadow-md cursor-pointer">
+                🛍️ 商店
             </button>
-            <div>模式: <span id="modeVal">經典射擊</span></div>
         </div>
     </div>
 
     <div class="relative w-full flex-1 flex items-center justify-center overflow-hidden">
         <canvas id="gameCanvas" class="w-full h-full"></canvas>
 
-        <div id="startScreen" class="absolute inset-0 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center z-20 text-center p-6">
-            <h1 class="pixel-font text-3xl md:text-5xl text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 mb-4 animate-pulse">星際戰機</h1>
-            <p class="text-gray-300 mb-6 text-sm md:text-base max-w-md">選擇遊戲模式，挑戰四捨五入與應用短答題！答題模式賺取金幣解鎖 10+ 種主題外觀與飛船！經典模式挑戰 1 分鐘定時 Boss 與 100/1500/2000/2500 分數 Boss 襲擊，解鎖萬五分與生存 10 分鐘隱藏成就獎牌！</p>
+        <!-- Start Screen -->
+        <div id="startScreen" class="absolute inset-0 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center z-20 text-center p-4">
+            <h1 class="pixel-font text-2xl md:text-5xl text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 mb-3 animate-pulse">星際戰機</h1>
+            <p class="text-gray-300 mb-5 text-xs md:text-base max-w-md">支援電腦、iPad 與手機！選擇經典射擊挑戰 Boss 襲擊，或透過「Boss 答題射擊模式」挑戰四捨五入與應用短答題，賺取金幣解鎖 10+ 種主題外觀與飛船！</p>
             
-            <div class="flex flex-col md:flex-row gap-4 w-full max-w-md justify-center">
-                <button id="startClassicBtn" class="pixel-font bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white px-6 py-3 rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.5)] transform hover:scale-105 transition-all text-sm md:text-base cursor-pointer">
+            <div class="flex flex-col sm:flex-row gap-3 w-full max-w-sm justify-center">
+                <button id="startClassicBtn" class="pixel-font bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 text-white px-4 py-2.5 rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.5)] text-xs md:text-sm cursor-pointer">
                     經典射擊模式
                 </button>
-                <button id="startQuizBtn" class="pixel-font bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-400 hover:to-pink-500 text-white px-6 py-3 rounded-xl shadow-[0_0_20px_rgba(168,85,247,0.5)] transform hover:scale-105 transition-all text-sm md:text-base cursor-pointer">
+                <button id="startQuizBtn" class="pixel-font bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-400 text-white px-4 py-2.5 rounded-xl shadow-[0_0_15px_rgba(168,85,247,0.5)] text-xs md:text-sm cursor-pointer">
                     Boss 答題射擊模式
                 </button>
             </div>
-            <div class="mt-4 flex gap-4">
-                <button id="startShopBtn" class="pixel-font bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-white px-5 py-2 rounded-xl text-xs md:text-sm cursor-pointer shadow-lg">
+            <div class="mt-3">
+                <button id="startShopBtn" class="pixel-font bg-gradient-to-r from-yellow-500 to-amber-600 text-white px-4 py-2 rounded-xl text-xs cursor-pointer shadow-md">
                     🛍️ 開啟積分主題商店
                 </button>
             </div>
-            <div class="mt-6 text-xs text-gray-500 pixel-font">經典模式: 擊退 UFO 與多階段 Boss (不獲金幣) | 答題模式: 答對數學題擊殺 Boss 賺取金幣！</div>
         </div>
 
-        <div id="gameOverScreen" class="absolute inset-0 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center z-20 text-center p-6 hidden">
-            <h2 id="gameOverTitle" class="pixel-font text-3xl md:text-5xl text-red-500 mb-2 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]">遊戲結束</h2>
-            <div id="achievementBadgeContainer" class="my-2 flex flex-wrap gap-2 justify-center"></div>
-            <p id="gameOverTipText" class="text-amber-300 mb-3 text-sm md:text-base font-bold whitespace-pre-line"></p>
-            <p class="text-gray-300 mb-2 text-lg">最終得分: <span id="finalScore" class="text-cyan-400 pixel-font">0</span></p>
-            <p class="text-gray-400 mb-6 text-sm">最高紀錄: <span id="highScore" class="text-yellow-400 pixel-font">0</span></p>
-            <div class="flex gap-4">
-                <button id="restartBtn" class="pixel-font bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-400 hover:to-pink-500 text-white px-6 py-3 rounded-xl shadow-[0_0_20px_rgba(239,68,68,0.5)] transform hover:scale-105 transition-all text-sm md:text-base cursor-pointer">
+        <!-- Game Over Screen -->
+        <div id="gameOverScreen" class="absolute inset-0 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center z-20 text-center p-4 hidden">
+            <h2 id="gameOverTitle" class="pixel-font text-2xl md:text-4xl text-red-500 mb-2 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]">遊戲結束</h2>
+            <div id="achievementBadgeContainer" class="my-1 flex flex-wrap gap-2 justify-center"></div>
+            <p id="gameOverTipText" class="text-amber-300 mb-2 text-xs md:text-sm font-bold whitespace-pre-line"></p>
+            <p class="text-gray-300 mb-1 text-base">最終得分: <span id="finalScore" class="text-cyan-400 pixel-font">0</span></p>
+            <p class="text-gray-400 mb-4 text-xs">最高紀錄: <span id="highScore" class="text-yellow-400 pixel-font">0</span></p>
+            <div class="flex gap-3">
+                <button id="restartBtn" class="pixel-font bg-gradient-to-r from-red-500 to-pink-600 text-white px-4 py-2.5 rounded-xl text-xs md:text-sm cursor-pointer">
                     再次挑戰
                 </button>
-                <button id="menuBtn" class="pixel-font bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-500 hover:to-gray-600 text-white px-6 py-3 rounded-xl shadow-[0_0_20px_rgba(107,114,128,0.5)] transform hover:scale-105 transition-all text-sm md:text-base cursor-pointer">
+                <button id="menuBtn" class="pixel-font bg-gradient-to-r from-gray-600 to-gray-700 text-white px-4 py-2.5 rounded-xl text-xs md:text-sm cursor-pointer">
                     返回主選單
                 </button>
             </div>
         </div>
     </div>
 
-    <div id="quizHud" class="w-full bg-black/95 border-t-2 border-cyan-500/60 backdrop-blur-md px-6 py-4 z-30 hidden shadow-[0_-5px_25px_rgba(6,182,212,0.4)] flex flex-col items-center justify-center">
-        <div class="flex justify-between items-center w-full max-w-4xl mb-2 text-xs md:text-sm font-bold">
-            <div id="bossHpContainer" class="text-red-400">階段一 Boss 血量: 5 / 5</div>
-            <div class="flex items-center gap-4">
-                <button id="hintBtn" class="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-white px-3 py-1 rounded-lg text-xs pixel-font shadow-[0_0_10px_rgba(245,158,11,0.5)] cursor-pointer flex items-center gap-1">
-                    💡 查看提示圖片
+    <div id="touchControls" class="absolute bottom-2 left-0 right-0 flex justify-between items-center px-4 pointer-events-none z-20 md:hidden">
+        <div class="flex gap-2 pointer-events-auto">
+            <button id="touchLeft" class="w-14 h-14 bg-slate-800/80 active:bg-cyan-500/60 border border-cyan-500 rounded-full text-cyan-300 text-xl flex items-center justify-center shadow-lg">◀</button>
+            <button id="touchRight" class="w-14 h-14 bg-slate-800/80 active:bg-cyan-500/60 border border-cyan-500 rounded-full text-cyan-300 text-xl flex items-center justify-center shadow-lg">▶</button>
+        </div>
+        <div class="pointer-events-auto">
+            <button id="touchShoot" class="w-16 h-16 bg-cyan-600/80 active:bg-cyan-400 border-2 border-cyan-300 rounded-full text-white font-bold text-xs pixel-font flex items-center justify-center shadow-lg">發射</button>
+        </div>
+    </div>
+
+    <div id="quizHud" class="w-full bg-black/95 border-t-2 border-cyan-500/60 backdrop-blur-md px-4 py-3 z-30 hidden shadow-[0_-5px_25px_rgba(6,182,212,0.4)] flex flex-col items-center justify-center">
+        <div class="flex justify-between items-center w-full max-w-4xl mb-1 text-[11px] md:text-sm font-bold">
+            <div id="bossHpContainer" class="text-red-400">階段 Boss 血量: 5 / 5</div>
+            <div class="flex items-center gap-2">
+                <button id="hintBtn" class="bg-gradient-to-r from-amber-500 to-yellow-600 text-white px-2 py-0.5 rounded text-[10px] md:text-xs pixel-font shadow-md cursor-pointer flex items-center gap-1">
+                    💡 提示
                 </button>
-                <div id="stageTitle" class="text-cyan-300">階段一：應用短答題挑戰 (答對 5 題進入階段二)</div>
+                <div id="stageTitle" class="text-cyan-300">階段一：應用短答題挑戰</div>
             </div>
         </div>
-        <div id="questionText" class="text-white text-base md:text-xl font-bold tracking-wide py-2 text-center w-full max-w-4xl">載入題目中...</div>
+        <div id="questionText" class="text-white text-sm md:text-lg font-bold tracking-wide py-1 text-center w-full max-w-4xl">載入題目中...</div>
         
-        <div id="optionsContainer" class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2 w-full max-w-4xl hidden"></div>
+        <div id="optionsContainer" class="grid grid-cols-2 gap-2 mt-1 w-full max-w-2xl hidden"></div>
 
-        <div id="inputContainer" class="flex gap-3 mt-2 w-full max-w-md hidden">
-            <input type="text" id="answerInput" placeholder="請在此輸入答案 (例如: 58.2 或 12.5)" class="flex-1 bg-slate-900 border-2 border-cyan-500/70 rounded-xl px-4 py-2 text-white text-sm md:text-base focus:outline-none focus:border-cyan-400">
-            <button id="submitAnswerBtn" class="pixel-font bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white px-6 py-2 rounded-xl text-xs md:text-sm shadow-lg cursor-pointer">
+        <div id="inputContainer" class="flex gap-2 mt-1 w-full max-w-md hidden">
+            <input type="text" id="answerInput" placeholder="請在此輸入答案 (例如: 58.2 或 12.5)" class="flex-1 bg-slate-900 border-2 border-cyan-500/70 rounded-lg px-3 py-1.5 text-white text-xs md:text-sm focus:outline-none focus:border-cyan-400">
+            <button id="submitAnswerBtn" class="pixel-font bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-4 py-1.5 rounded-lg text-xs shadow-lg cursor-pointer">
                 送出
             </button>
         </div>
     </div>
 
-    <div id="shopModal" class="absolute inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 hidden p-4">
-        <div class="bg-slate-900 border-2 border-yellow-500 p-6 rounded-2xl max-w-4xl w-full shadow-[0_0_40px_rgba(245,158,11,0.6)] flex flex-col items-center">
-            <div class="flex justify-between items-center w-full mb-4">
-                <h3 class="pixel-font text-yellow-400 text-sm md:text-lg">🛍️ 星際積分主題商店 (10+ 款外觀與背景)</h3>
-                <div class="text-sm font-bold text-yellow-300">持有金幣: <span id="shopCoinVal">🪙 0</span></div>
+    <div id="shopModal" class="absolute inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 hidden p-3">
+        <div class="bg-slate-900 border-2 border-yellow-500 p-4 md:p-6 rounded-2xl max-w-3xl w-full shadow-[0_0_40px_rgba(245,158,11,0.6)] flex flex-col items-center">
+            <div class="flex justify-between items-center w-full mb-3">
+                <h3 class="pixel-font text-yellow-400 text-xs md:text-base">🛍️ 星際積分主題商店</h3>
+                <div class="text-xs md:text-sm font-bold text-yellow-300">金幣: <span id="shopCoinVal">🪙 0</span></div>
             </div>
 
-            <div class="w-full max-h-[60vh] overflow-y-auto space-y-4 pr-2">
+            <div class="w-full max-h-[55vh] overflow-y-auto space-y-3 pr-1">
                 <div>
-                    <h4 class="text-cyan-400 text-xs md:text-sm font-bold mb-2">🚀 飛船外觀解鎖 (多達 6 種)</h4>
-                    <div id="shipShopList" class="grid grid-cols-1 md:grid-cols-3 gap-3"></div>
+                    <h4 class="text-cyan-400 text-xs font-bold mb-1.5">🚀 飛船外觀解鎖</h4>
+                    <div id="shipShopList" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2"></div>
                 </div>
                 <div>
-                    <h4 class="text-purple-400 text-xs md:text-sm font-bold mb-2">🌌 太空背景主題解鎖 (多達 6 種)</h4>
-                    <div id="bgShopList" class="grid grid-cols-1 md:grid-cols-3 gap-3"></div>
+                    <h4 class="text-purple-400 text-xs font-bold mb-1.5">🌌 太空背景主題解鎖</h4>
+                    <div id="bgShopList" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2"></div>
                 </div>
             </div>
 
-            <button id="closeShopBtn" class="mt-6 pixel-font bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-white px-6 py-2.5 rounded-xl text-xs shadow-lg cursor-pointer">
+            <button id="closeShopBtn" class="mt-4 pixel-font bg-gradient-to-r from-yellow-500 to-amber-600 text-white px-5 py-2 rounded-xl text-xs shadow-lg cursor-pointer">
                 關閉商店
             </button>
         </div>
     </div>
 
-    <div id="hintModal" class="absolute inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 hidden p-4">
-        <div class="bg-slate-900 border-2 border-amber-500 p-4 rounded-2xl max-w-2xl w-full text-center shadow-[0_0_40px_rgba(245,158,11,0.6)] flex flex-col items-center">
-            <h3 class="pixel-font text-amber-400 text-sm md:text-lg mb-3">💡 四捨五入學習重點指南</h3>
-            <div class="w-full max-h-[60vh] overflow-hidden rounded-xl border border-amber-500/50 mb-4 bg-black flex justify-center items-center">
-                <img src="四捨五入.jpg" alt="四捨五入提示圖" id="hintImgEl" class="max-w-full max-h-[55vh] object-contain rounded-lg" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=800&auto=format&fit=crop&q=80';">
+    <div id="hintModal" class="absolute inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 hidden p-3">
+        <div class="bg-slate-900 border-2 border-amber-500 p-4 rounded-2xl max-w-lg w-full text-center shadow-[0_0_40px_rgba(245,158,11,0.6)] flex flex-col items-center">
+            <h3 class="pixel-font text-amber-400 text-xs md:text-sm mb-2">💡 四捨五入學習重點指南</h3>
+            <div class="w-full max-h-[50vh] overflow-hidden rounded-xl border border-amber-500/50 mb-3 bg-black flex justify-center items-center">
+                <img src="四捨五入.jpg" alt="四捨五入提示圖" id="hintImgEl" class="max-w-full max-h-[45vh] object-contain rounded-lg" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=800&auto=format&fit=crop&q=80';">
             </div>
-            <p class="text-xs text-gray-300 mb-4">提示口訣：<strong>取至幾分位就要計多 1 行</strong>（十分位、百分位與千分位運算要點！）</p>
-            <button id="closeHintBtn" class="pixel-font bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-white px-6 py-2.5 rounded-xl text-xs shadow-lg cursor-pointer">
-                關閉提示，繼續答題
+            <p class="text-[11px] text-gray-300 mb-3">提示口訣：<strong>取至幾分位就要計多 1 行</strong>（十分位、百分位與千分位運算要點！）</p>
+            <button id="closeHintBtn" class="pixel-font bg-gradient-to-r from-amber-500 to-yellow-600 text-white px-5 py-2 rounded-xl text-xs shadow-lg cursor-pointer">
+                關閉提示
             </button>
         </div>
     </div>
 
-    <div id="messageModal" class="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-40 hidden">
-        <div class="bg-gray-900 border-2 border-red-500 p-6 rounded-2xl max-w-md w-11/12 text-center shadow-[0_0_30px_rgba(239,68,68,0.6)]">
-            <h3 id="modalTitle" class="pixel-font text-red-400 text-lg mb-3">回答錯誤！</h3>
-            <p id="modalMessage" class="text-gray-200 text-sm md:text-base mb-6 leading-relaxed whitespace-pre-line"></p>
-            <button id="modalCloseBtn" class="pixel-font bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white px-6 py-3 rounded-xl shadow-lg cursor-pointer text-sm">
+    <div id="messageModal" class="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-40 hidden p-4">
+        <div class="bg-gray-900 border-2 border-red-500 p-5 rounded-2xl max-w-sm w-full text-center shadow-[0_0_30px_rgba(239,68,68,0.6)]">
+            <h3 id="modalTitle" class="pixel-font text-red-400 text-base mb-2">回答錯誤！</h3>
+            <p id="modalMessage" class="text-gray-200 text-xs md:text-sm mb-4 leading-relaxed whitespace-pre-line"></p>
+            <button id="modalCloseBtn" class="pixel-font bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-5 py-2.5 rounded-xl shadow-lg cursor-pointer text-xs">
                 確定，繼續挑戰
             </button>
         </div>
@@ -179,7 +191,6 @@
             }
         }
 
-        // Procedural Sound Effects
         const SoundFX = {
             playLaser() {
                 if (!soundEnabled) return;
@@ -279,13 +290,12 @@
             }
         };
 
-        // Procedural Ambient Space BGM (Arpeggiated Synth Loop)
         function startBGM() {
             if (bgmInterval) clearInterval(bgmInterval);
             const notes = [220, 246.94, 277.18, 329.63, 392.00, 440];
             let noteIdx = 0;
             bgmInterval = setInterval(() => {
-                if (!bgmEnabled || !soundEnabled || !audioCtx) return;
+                if (!bgmEnabled || !audioCtx) return;
                 try {
                     let osc = audioCtx.createOscillator();
                     let gain = audioCtx.createGain();
@@ -318,11 +328,11 @@
         const bgmToggleBtn = document.getElementById('bgmToggleBtn');
         bgmToggleBtn.addEventListener('click', () => {
             bgmEnabled = !bgmEnabled;
-            bgmToggleBtn.textContent = bgmEnabled ? '🎵 背景音樂: 開' : '🔇 背景音樂: 關';
-            if (!bgmEnabled) {
-                stopBGM();
-            } else if (gameState === 'PLAYING') {
+            bgmToggleBtn.textContent = bgmEnabled ? '🎵 音樂: 開' : '🔇 音樂: 關';
+            if (bgmEnabled && gameState === 'PLAYING') {
                 startBGM();
+            } else {
+                stopBGM();
             }
         });
 
@@ -345,7 +355,6 @@
         const highScoreHudValEl = document.getElementById('highScoreHudVal');
         const coinValEl = document.getElementById('coinVal');
         const timeValEl = document.getElementById('timeVal');
-        const modeValEl = document.getElementById('modeVal');
         const quizHud = document.getElementById('quizHud');
         const stageTitleEl = document.getElementById('stageTitle');
         const questionTextEl = document.getElementById('questionText');
@@ -367,6 +376,10 @@
         const hintBtn = document.getElementById('hintBtn');
         const hintModal = document.getElementById('hintModal');
         const closeHintBtn = document.getElementById('closeHintBtn');
+        const touchControls = document.getElementById('touchControls');
+        const touchLeft = document.getElementById('touchLeft');
+        const touchRight = document.getElementById('touchRight');
+        const touchShoot = document.getElementById('touchShoot');
 
         let gameState = 'START';
         let gameMode = 'CLASSIC';
@@ -391,6 +404,7 @@
 
         let player = null;
         let bullets = [];
+        let homingMissiles = [];
         let enemies = [];
         let classicBosses = [];
         let enemyBullets = [];
@@ -449,16 +463,16 @@
             shopData.ships.forEach(ship => {
                 const isEquipped = currentShip === ship.id;
                 const div = document.createElement('div');
-                div.className = `p-3 rounded-xl border ${isEquipped ? 'border-cyan-400 bg-cyan-950/40' : 'border-slate-700 bg-slate-800'} flex flex-col justify-between`;
+                div.className = `p-2.5 rounded-xl border ${isEquipped ? 'border-cyan-400 bg-cyan-950/40' : 'border-slate-700 bg-slate-800'} flex flex-col justify-between`;
                 div.innerHTML = `
                     <div>
-                        <div class="font-bold text-xs md:text-sm text-white mb-1">${ship.name}</div>
-                        <div class="text-[10px] text-gray-400 mb-2">顏色: <span style="color:${ship.color}">■■■</span></div>
+                        <div class="font-bold text-xs text-white mb-1">${ship.name}</div>
+                        <div class="text-[10px] text-gray-400 mb-1">顏色: <span style="color:${ship.color}">■■■</span></div>
                     </div>
                     <div>
                         ${ship.unlocked ? 
-                            `<button ${isEquipped ? 'disabled' : ''} onclick="equipShip('${ship.id}')" class="w-full py-1.5 rounded-lg text-xs pixel-font ${isEquipped ? 'bg-slate-700 text-gray-400 cursor-default' : 'bg-cyan-600 hover:bg-cyan-500 text-white cursor-pointer'}">${isEquipped ? '使用中' : '裝備'}</button>` :
-                            `<button onclick="buyShip('${ship.id}')" class="w-full py-1.5 rounded-lg text-xs pixel-font bg-yellow-600 hover:bg-yellow-500 text-white cursor-pointer">🪙 ${ship.price} 解鎖</button>`
+                            `<button ${isEquipped ? 'disabled' : ''} onclick="equipShip('${ship.id}')" class="w-full py-1 rounded text-[11px] pixel-font ${isEquipped ? 'bg-slate-700 text-gray-400' : 'bg-cyan-600 hover:bg-cyan-500 text-white cursor-pointer'}">${isEquipped ? '使用中' : '裝備'}</button>` :
+                            `<button onclick="buyShip('${ship.id}')" class="w-full py-1 rounded text-[11px] pixel-font bg-yellow-600 hover:bg-yellow-500 text-white cursor-pointer">🪙 ${ship.price} 解鎖</button>`
                         }
                     </div>
                 `;
@@ -469,15 +483,15 @@
             shopData.backgrounds.forEach(bg => {
                 const isEquipped = currentBg === bg.id;
                 const div = document.createElement('div');
-                div.className = `p-3 rounded-xl border ${isEquipped ? 'border-purple-400 bg-purple-950/40' : 'border-slate-700 bg-slate-800'} flex flex-col justify-between`;
+                div.className = `p-2.5 rounded-xl border ${isEquipped ? 'border-purple-400 bg-purple-950/40' : 'border-slate-700 bg-slate-800'} flex flex-col justify-between`;
                 div.innerHTML = `
                     <div>
-                        <div class="font-bold text-xs md:text-sm text-white mb-1">${bg.name}</div>
+                        <div class="font-bold text-xs text-white mb-1">${bg.name}</div>
                     </div>
                     <div>
                         ${bg.unlocked ? 
-                            `<button ${isEquipped ? 'disabled' : ''} onclick="equipBg('${bg.id}')" class="w-full py-1.5 rounded-lg text-xs pixel-font ${isEquipped ? 'bg-slate-700 text-gray-400 cursor-default' : 'bg-purple-600 hover:bg-purple-500 text-white cursor-pointer'}">${isEquipped ? '使用中' : '裝備'}</button>` :
-                            `<button onclick="buyBg('${bg.id}')" class="w-full py-1.5 rounded-lg text-xs pixel-font bg-yellow-600 hover:bg-yellow-500 text-white cursor-pointer">🪙 ${bg.price} 解鎖</button>`
+                            `<button ${isEquipped ? 'disabled' : ''} onclick="equipBg('${bg.id}')" class="w-full py-1 rounded text-[11px] pixel-font ${isEquipped ? 'bg-slate-700 text-gray-400' : 'bg-purple-600 hover:bg-purple-500 text-white cursor-pointer'}">${isEquipped ? '使用中' : '裝備'}</button>` :
+                            `<button onclick="buyBg('${bg.id}')" class="w-full py-1 rounded text-[11px] pixel-font bg-yellow-600 hover:bg-yellow-500 text-white cursor-pointer">🪙 ${bg.price} 解鎖</button>`
                         }
                     </div>
                 `;
@@ -533,6 +547,8 @@
         window.addEventListener('resize', resizeCanvas);
 
         const keys = { ArrowLeft: false, ArrowRight: false, Space: false };
+        let touchMoveLeft = false;
+        let touchMoveRight = false;
         let touchX = null;
         let isMouseDown = false;
         let mouseX = canvas.width / 2;
@@ -554,6 +570,12 @@
             }
         });
 
+        touchLeft.addEventListener('touchstart', () => { touchMoveLeft = true; initAudio(); });
+        touchLeft.addEventListener('touchend', () => { touchMoveLeft = false; });
+        touchRight.addEventListener('touchstart', () => { touchMoveRight = true; initAudio(); });
+        touchRight.addEventListener('touchend', () => { touchMoveRight = false; });
+        touchShoot.addEventListener('touchstart', () => { if (player && gameMode === 'CLASSIC') player.shoot(); initAudio(); });
+
         canvas.addEventListener('mousemove', e => {
             if (gameMode === 'CLASSIC') {
                 mouseX = e.clientX;
@@ -566,16 +588,14 @@
             if (gameMode === 'CLASSIC' && e.touches.length > 0) {
                 touchX = e.touches[0].clientX;
             }
-            e.preventDefault();
-        }, { passive: false });
+        }, { passive: true });
 
         canvas.addEventListener('touchstart', e => {
             initAudio();
             if (gameMode === 'CLASSIC' && e.touches.length > 0) {
                 touchX = e.touches[0].clientX;
             }
-            e.preventDefault();
-        }, { passive: false });
+        }, { passive: true });
 
         canvas.addEventListener('touchend', () => {
             touchX = null;
@@ -598,8 +618,8 @@
 
         class Player {
             constructor() {
-                this.width = 50;
-                this.height = 45;
+                this.width = 45;
+                this.height = 40;
                 this.x = canvas.width / 2 - this.width / 2;
                 this.y = canvas.height - 70;
                 this.speed = 8;
@@ -610,8 +630,8 @@
 
             update() {
                 if (gameMode === 'CLASSIC') {
-                    if (keys.ArrowLeft) this.x -= this.speed;
-                    if (keys.ArrowRight) this.x += this.speed;
+                    if (keys.ArrowLeft || touchMoveLeft) this.x -= this.speed;
+                    if (keys.ArrowRight || touchMoveRight) this.x += this.speed;
 
                     if (touchX !== null) {
                         const dx = touchX - (this.x + this.width / 2);
@@ -637,16 +657,11 @@
                 if (this.invulnerableTimer > 0) this.invulnerableTimer--;
             }
 
-            shoot(isHoming = false, target = null) {
+            shoot() {
                 let bulletColor = '#22d3ee';
                 let foundShip = shopData.ships.find(s => s.id === currentShip);
                 if (foundShip) bulletColor = foundShip.color;
-                
-                if (isHoming && target) {
-                    bullets.push(new HomingMissile(this.x + this.width / 2 - 3, this.y, target, bulletColor));
-                } else {
-                    bullets.push(new Bullet(this.x + this.width / 2 - 3, this.y, 0, -14, bulletColor));
-                }
+                bullets.push(new Bullet(this.x + this.width / 2 - 3, this.y, 0, -14, bulletColor));
                 SoundFX.playLaser();
             }
 
@@ -658,7 +673,7 @@
 
                 ctx.fillStyle = '#f97316';
                 ctx.beginPath();
-                ctx.arc(0, this.height / 2 + 2, Math.sin(gameTime * 0.3) * 3 + 6, 0, Math.PI * 2);
+                ctx.arc(0, this.height / 2 + 2, Math.sin(gameTime * 0.3) * 3 + 5, 0, Math.PI * 2);
                 ctx.fill();
 
                 let shipColor = '#06b6d4';
@@ -676,7 +691,7 @@
 
                 ctx.fillStyle = '#f43f5e';
                 ctx.beginPath();
-                ctx.ellipse(0, -2, 5, 12, 0, 0, Math.PI * 2);
+                ctx.ellipse(0, -2, 4, 10, 0, 0, Math.PI * 2);
                 ctx.fill();
 
                 ctx.restore();
@@ -685,8 +700,8 @@
 
         class UFOEnemy {
             constructor() {
-                this.width = 50;
-                this.height = 30;
+                this.width = 45;
+                this.height = 25;
                 this.x = Math.random() * (canvas.width - this.width - 40) + 20;
                 this.y = -50;
                 this.vy = Math.random() * 1.5 + 2;
@@ -707,35 +722,20 @@
                 ctx.save();
                 ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
 
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = '#a855f7';
-
                 ctx.fillStyle = '#c084fc';
                 ctx.beginPath();
-                ctx.ellipse(0, -6, 16, 12, 0, 0, Math.PI * 2);
+                ctx.ellipse(0, -5, 14, 10, 0, 0, Math.PI * 2);
                 ctx.fill();
 
                 ctx.fillStyle = '#ec4899';
                 ctx.beginPath();
-                ctx.ellipse(0, 4, this.width / 2, 10, 0, 0, Math.PI * 2);
+                ctx.ellipse(0, 3, this.width / 2, 8, 0, 0, Math.PI * 2);
                 ctx.fill();
 
-                ctx.fillStyle = '#38bdf8';
-                for (let i = -1; i <= 1; i++) {
-                    ctx.beginPath();
-                    ctx.arc(i * 12, 6, 3, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-
-                ctx.shadowBlur = 0;
-
                 ctx.fillStyle = 'rgba(0,0,0,0.7)';
-                ctx.fillRect(-25, -22, 50, 6);
+                ctx.fillRect(-22, -18, 44, 5);
                 ctx.fillStyle = '#22c55e';
-                ctx.fillRect(-25, -22, (this.hp / this.maxHp) * 50, 6);
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 1;
-                ctx.strokeRect(-25, -22, 50, 6);
+                ctx.fillRect(-22, -18, (this.hp / this.maxHp) * 44, 5);
 
                 ctx.restore();
             }
@@ -743,11 +743,11 @@
 
         class ClassicMiniBoss {
             constructor() {
-                this.width = 120;
-                this.height = 80;
+                this.width = 100;
+                this.height = 70;
                 this.x = canvas.width / 2 - this.width / 2;
-                this.y = -100;
-                this.targetY = 80;
+                this.y = -90;
+                this.targetY = 70;
                 this.maxHp = 25;
                 this.hp = 25;
                 this.vx = 3;
@@ -767,8 +767,6 @@
                     if (this.shootTimer >= 40) {
                         this.shootTimer = 0;
                         enemyBullets.push(new Bullet(this.x + this.width / 2 - 3, this.y + this.height, 0, 5, '#ef4444'));
-                        enemyBullets.push(new Bullet(this.x + this.width / 4, this.y + this.height, -1.5, 4.5, '#ef4444'));
-                        enemyBullets.push(new Bullet(this.x + (this.width * 3) / 4, this.y + this.height, 1.5, 4.5, '#ef4444'));
                     }
                 }
             }
@@ -777,32 +775,19 @@
                 ctx.save();
                 ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
 
-                ctx.shadowBlur = 25;
-                ctx.shadowColor = '#ef4444';
-
                 ctx.fillStyle = '#450a0a';
                 ctx.beginPath();
                 ctx.ellipse(0, 0, this.width / 2, this.height / 2, 0, 0, Math.PI * 2);
                 ctx.fill();
 
                 ctx.strokeStyle = '#f87171';
-                ctx.lineWidth = 3;
+                ctx.lineWidth = 2;
                 ctx.stroke();
 
-                ctx.fillStyle = '#f59e0b';
-                ctx.beginPath();
-                ctx.arc(0, -10, 22, Math.PI, 0, false);
-                ctx.fill();
-
-                ctx.shadowBlur = 0;
-
                 ctx.fillStyle = 'rgba(0,0,0,0.7)';
-                ctx.fillRect(-50, -60, 100, 10);
+                ctx.fillRect(-45, -50, 90, 8);
                 ctx.fillStyle = '#ef4444';
-                ctx.fillRect(-50, -60, (this.hp / this.maxHp) * 100, 10);
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 1;
-                ctx.strokeRect(-50, -60, 100, 10);
+                ctx.fillRect(-45, -50, (this.hp / this.maxHp) * 90, 8);
 
                 ctx.restore();
             }
@@ -810,10 +795,10 @@
 
         class QuizBoss {
             constructor() {
-                this.width = 160;
-                this.height = 100;
+                this.width = 130;
+                this.height = 90;
                 this.x = canvas.width / 2 - this.width / 2;
-                this.y = 60;
+                this.y = 50;
                 this.maxHp = 5;
                 this.hp = 5;
                 this.vx = 2;
@@ -821,7 +806,7 @@
 
             update() {
                 this.x += this.vx;
-                if (this.x < 40 || this.x > canvas.width - this.width - 40) {
+                if (this.x < 30 || this.x > canvas.width - this.width - 30) {
                     this.vx *= -1;
                 }
             }
@@ -830,32 +815,24 @@
                 ctx.save();
                 ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
 
-                ctx.shadowBlur = 30;
-                ctx.shadowColor = currentStage === 1 ? '#a855f7' : (currentStage === 2 ? '#38bdf8' : (currentStage === 3 ? '#22c55e' : '#ec4899'));
-
                 ctx.fillStyle = '#311042';
                 ctx.beginPath();
                 ctx.ellipse(0, 0, this.width / 2, this.height / 2, 0, 0, Math.PI * 2);
                 ctx.fill();
 
                 ctx.strokeStyle = '#ec4899';
-                ctx.lineWidth = 3;
+                ctx.lineWidth = 2;
                 ctx.stroke();
 
                 ctx.fillStyle = '#38bdf8';
                 ctx.beginPath();
-                ctx.arc(0, -15, 28, Math.PI, 0, false);
+                ctx.arc(0, -12, 22, Math.PI, 0, false);
                 ctx.fill();
 
-                ctx.shadowBlur = 0;
-
                 ctx.fillStyle = 'rgba(0,0,0,0.7)';
-                ctx.fillRect(-70, -75, 140, 12);
+                ctx.fillRect(-55, -60, 110, 10);
                 ctx.fillStyle = '#ef4444';
-                ctx.fillRect(-70, -75, (this.hp / this.maxHp) * 140, 12);
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 1;
-                ctx.strokeRect(-70, -75, 140, 12);
+                ctx.fillRect(-55, -60, (this.hp / this.maxHp) * 110, 10);
 
                 ctx.restore();
             }
@@ -867,8 +844,8 @@
                 this.y = y;
                 this.vx = vx;
                 this.vy = vy;
-                this.width = 6;
-                this.height = 16;
+                this.width = 5;
+                this.height = 14;
                 this.color = color;
             }
 
@@ -879,60 +856,63 @@
 
             draw() {
                 ctx.fillStyle = this.color;
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = this.color;
                 ctx.fillRect(this.x, this.y, this.width, this.height);
-                ctx.shadowBlur = 0;
             }
         }
 
         class HomingMissile {
-            constructor(x, y, target, color) {
+            constructor(x, y, targetX, targetY, onHit) {
                 this.x = x;
                 this.y = y;
-                this.target = target;
-                this.width = 8;
-                this.height = 20;
-                this.speed = 12;
-                this.color = color;
+                this.targetX = targetX;
+                this.targetY = targetY;
+                this.speed = 14;
+                this.onHit = onHit;
+                let bulletColor = '#22d3ee';
+                let foundShip = shopData.ships.find(s => s.id === currentShip);
+                if (foundShip) bulletColor = foundShip.color;
+                this.color = bulletColor;
             }
 
             update() {
-                if (this.target) {
-                    let targetX = this.target.x + this.target.width / 2;
-                    let targetY = this.target.y + this.target.height / 2;
-                    let dx = targetX - this.x;
-                    let dy = targetY - this.y;
-                    let dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist > 1) {
-                        this.x += (dx / dist) * this.speed;
-                        this.y += (dy / dist) * this.speed;
-                    }
+                let dx = this.targetX - this.x;
+                let dy = this.targetY - this.y;
+                let dist = Math.hypot(dx, dy);
+                if (dist < this.speed) {
+                    this.x = this.targetX;
+                    this.y = this.targetY;
+                    if (this.onHit) this.onHit();
+                    return true;
                 } else {
-                    this.y -= this.speed;
+                    this.x += (dx / dist) * this.speed;
+                    this.y += (dy / dist) * this.speed;
+                    return false;
                 }
             }
 
             draw() {
+                ctx.save();
                 ctx.fillStyle = this.color;
                 ctx.shadowBlur = 12;
                 ctx.shadowColor = this.color;
-                ctx.fillRect(this.x - 2, this.y, this.width, this.height);
-                ctx.shadowBlur = 0;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
             }
         }
 
         function createExplosion(x, y, color) {
             SoundFX.playExplosion();
-            for (let i = 0; i < 15; i++) {
+            for (let i = 0; i < 12; i++) {
                 particles.push({
                     x: x,
                     y: y,
-                    vx: (Math.random() - 0.5) * 6,
-                    vy: (Math.random() - 0.5) * 6,
+                    vx: (Math.random() - 0.5) * 5,
+                    vy: (Math.random() - 0.5) * 5,
                     size: Math.random() * 3 + 2,
                     color: color,
-                    life: 30
+                    life: 25
                 });
             }
         }
@@ -944,12 +924,7 @@
             { q: "將長度 7.82 m 取至十分位", correct: "7.8", tip: "取至十分位。7.82 的百分位是 2 (< 5)，故捨去得 7.8 m。" },
             { q: "將距離 45.67 km 取至十分位", correct: "45.7", tip: "取至十分位。45.67 的百分位是 7 (>= 5)，故進位得 45.7 km。" },
             { q: "將金額 $89.33 取至角", correct: "89.3", tip: "取至角即十分位。$89.33 的百分位是 3 (< 5)，故捨去得 $89.3。" },
-            { q: "將重量 3.18 kg 取至十分位", correct: "3.2", tip: "取至十分位。3.18 的百分位是 8 (>= 5)，故進位得 3.2 kg。" },
-            { q: "將長度 15.24 cm 取至十分位", correct: "15.2", tip: "取至十分位。15.24 的百分位是 4 (< 5)，故捨去得 15.2 cm。" },
-            { q: "將金額 $210.95 取至元", correct: "211", tip: "取至元即個位。十分位是 9 (>= 5)，故進位得 $211。" },
-            { q: "將重量 8.41 kg 取至十分位", correct: "8.4", tip: "取至十分位。百分位是 1 (< 5)，故捨去得 8.4 kg。" },
-            { q: "將金額 $45.82 取至角", correct: "45.8", tip: "取至角即十分位。百分位是 2 (< 5)，故捨去得 $45.8。" },
-            { q: "將長度 19.37 m 取至十分位", correct: "19.4", tip: "取至十分位。百分位是 7 (>= 5)，故進位得 19.4 m。" }
+            { q: "將重量 3.18 kg 取至十分位", correct: "3.2", tip: "取至十分位。3.18 的百分位是 8 (>= 5)，故進位得 3.2 kg。" }
         ];
 
         const rawStage2Bank = [
@@ -958,20 +933,16 @@
             { q: "1 ÷ 6 = 0.167，這小數是取至甚麼位值？", options: ["個位", "十分位", "百分位", "千分位"], correct: "千分位", tip: "0.167 小數點後第三位是 7，代表千分位。" },
             { q: "5 ÷ 7 = 0.714，這小數是取至甚麼位值？", options: ["十位", "十分位", "百分位", "千分位"], correct: "千分位", tip: "0.714 小數點後第三位是 4，代表千分位。" },
             { q: "3 ÷ 8 = 0.375，這小數是取至甚麼位值？", options: ["個位", "十分位", "百分位", "千分位"], correct: "千分位", tip: "0.375 小數點後第三位是 5，代表千分位。" },
-            { q: "3 ÷ 11 = 0.27，這小數是取至甚麼位值？", options: ["個位", "十分位", "百分位", "千分位"], correct: "百分位", tip: "0.27 小數點後第二位是 7，代表百分位。" },
-            { q: "4 ÷ 11 = 0.36，這小數是取至甚麼位值？", options: ["個位", "十分位", "百分位", "千分位"], correct: "百分位", tip: "0.36 小數點後第二位是 6，代表百分位。" },
-            { q: "2 ÷ 9 = 0.22，這小數是取至甚麼位值？", options: ["個位", "十分位", "百分位", "千分位"], correct: "百分位", tip: "0.22 小數點後第二位是 2，代表百分位。" }
+            { q: "3 ÷ 11 = 0.27，這小數是取至甚麼位值？", options: ["個位", "十分位", "百分位", "千分位"], correct: "百分位", tip: "0.27 小數點後第二位是 7，代表百分位。" }
         ];
 
         const rawStage3Bank = [
-            { q: "2 ÷ 7 = 0.29，為了取至百分位，我需要用直式計算到哪一個數位？", options: ["個位", "小數點後兩位", "小數點後三位", "十位"], correct: "小數點後三位", tip: "取至百分位（小數點後兩位）時，我們必須計算到下一位（即千分位／小數點後三位），透過該數字判斷是「四捨」還是「五入」。" },
+            { q: "2 ÷ 7 = 0.29，為了取至百分位，我需要用直式計算到哪一個數位？", options: ["個位", "小數點後兩位", "小數點後三位", "十位"], correct: "小數點後三位", tip: "取至百分位時，我們必須計算到下一位（即千分位／小數點後三位）以進行四捨五入。" },
             { q: "1 ÷ 7 (答案取至百分位)", correct: "0.14", tip: "1 ÷ 7 = 0.142... 取至百分位為 0.14。" },
             { q: "2 ÷ 7 (答案取至百分位)", correct: "0.29", tip: "2 ÷ 7 = 0.285... 取至百分位為 0.29。" },
             { q: "4 ÷ 7 (答案取至百分位)", correct: "0.57", tip: "4 ÷ 7 = 0.571... 取至百分位為 0.57。" },
             { q: "5 ÷ 7 (答案取至百分位)", correct: "0.71", tip: "5 ÷ 7 = 0.714... 取至百分位為 0.71。" },
-            { q: "1 ÷ 6 (答案取至百分位)", correct: "0.17", tip: "1 ÷ 6 = 0.166... 取至百分位為 0.17。" },
-            { q: "3 ÷ 11 (答案取至百分位)", correct: "0.27", tip: "3 ÷ 11 = 0.272... 取至百分位為 0.27。" },
-            { q: "5 ÷ 9 (答案取至百分位)", correct: "0.56", tip: "5 ÷ 9 = 0.555... 取至百分位為 0.56。" }
+            { q: "1 ÷ 6 (答案取至百分位)", correct: "0.17", tip: "1 ÷ 6 = 0.166... 取至百分位為 0.17。" }
         ];
 
         const rawStage4Bank = [
@@ -981,9 +952,9 @@
             { q: "3 ÷ 7 = 0.428，這小數是取至甚麼位值？", options: ["個位", "十分位", "百分位", "千分位"], correct: "千分位", tip: "0.428 小數點後第三位是 8，代表千分位。" },
             { q: "5 ÷ 9 = 0.556，這小數是取至甚麼位值？", options: ["個位", "十分位", "百分位", "千分位"], correct: "千分位", tip: "0.556 小數點後第三位是 6，代表千分位。" },
             { q: "3 ÷ 7 = 0.43，這小數是取至甚麼位值？", options: ["個位", "十分位", "百分位", "千分位"], correct: "百分位", tip: "0.43 小數點後第二位是 3，代表百分位。" },
-            { q: "3 ÷ 7 (答案取至百分位)", options: ["0.43", "0.44", "0.42", "0.45"], correct: "0.43", tip: "3 ÷ 7 = 0.428... 取至百分位為 0.43。" },
-            { q: "2 ÷ 9 (答案取至百分位)", options: ["0.22", "0.23", "0.21", "0.25"], correct: "0.22", tip: "2 ÷ 9 = 0.222... 取至百分位為 0.22。" },
-            { q: "4 ÷ 9 (答案取至百分位)", options: ["0.44", "0.45", "0.43", "0.40"], correct: "0.44", tip: "4 ÷ 9 = 0.444... 取至百分位為 0.44。" },
+            { q: "3 ÷ 7 (答案取至百分位)", correct: "0.43", tip: "3 ÷ 7 = 0.428... 取至百分位為 0.43。" },
+            { q: "2 ÷ 9 (答案取至百分位)", correct: "0.22", tip: "2 ÷ 9 = 0.222... 取至百分位為 0.22。" },
+            { q: "4 ÷ 9 (答案取至百分位)", correct: "0.44", tip: "4 ÷ 9 = 0.444... 取至百分位為 0.44。" },
             { q: "將 15.8889 取至千分位", correct: "15.889", tip: "萬分位是 9 (>= 5)，向前進位得 15.889。" }
         ];
 
@@ -997,11 +968,21 @@
         }
 
         function initSessionQuestions() {
+            let s1 = shuffleArray(rawStage1Bank).slice(0, 5);
+            let s2 = shuffleArray(rawStage2Bank).slice(0, 5);
+            let s3 = shuffleArray(rawStage3Bank).slice(0, 5);
+
+            let s4_1 = shuffleArray(rawStage1Bank).slice(0, 3);
+            let s4_2 = shuffleArray(rawStage2Bank).slice(0, 3);
+            let s4_3 = shuffleArray(rawStage3Bank).slice(0, 3);
+            let s4_extra = shuffleArray(rawStage4Bank).slice(0, 1);
+            let s4 = shuffleArray([...s4_1, ...s4_2, ...s4_3, ...s4_extra]);
+
             sessionQuestions = {
-                stage1: shuffleArray(rawStage1Bank).slice(0, 5),
-                stage2: shuffleArray(rawStage2Bank).slice(0, 5),
-                stage3: shuffleArray(rawStage3Bank).slice(0, 5),
-                stage4: shuffleArray(rawStage4Bank).slice(0, 10)
+                stage1: s1,
+                stage2: s2,
+                stage3: s3,
+                stage4: s4
             };
         }
 
@@ -1016,6 +997,8 @@
                     questionIndex = 0;
                     showModal('階段完成！', `恭喜通過階段 ${currentStage - 1}！即將進入階段 ${currentStage}（共 10 題挑戰）。`, () => {
                         boss = new QuizBoss();
+                        boss.maxHp = currentStage === 4 ? 10 : 5;
+                        boss.hp = boss.maxHp;
                         loadQuestion();
                     });
                     return;
@@ -1024,7 +1007,7 @@
                     stopBGM();
                     SoundFX.playCorrect();
                     gameOverTitleEl.textContent = '🎉 恭喜通關！';
-                    gameOverTipText.textContent = `太厲害了！你成功擊敗了所有 Boss 並精通所有 10 題高難度四捨五入！`;
+                    gameOverTipText.textContent = `太厲害了！你成功擊敗了所有 Boss 並精通所有高難度四捨五入！`;
                     finalScoreEl.textContent = score;
                     if (score > highScore) {
                         highScore = score;
@@ -1038,10 +1021,11 @@
             }
 
             currentQuestion = currentBank[questionIndex];
-            bossHpContainer.textContent = `階段 ${currentStage} Boss 血量: ${boss ? boss.hp : totalStageQuestions} / ${totalStageQuestions}`;
+            let totalQ = currentStage === 4 ? 10 : 5;
+            bossHpContainer.textContent = `階段 ${currentStage} Boss 血量: ${boss ? boss.hp : totalQ} / ${totalQ}`;
             
             let stageNames = ['', '一', '二', '三', '四'];
-            stageTitleEl.textContent = `階段${stageNames[currentStage]}：答題挑戰 (第 ${questionIndex + 1}/${totalStageQuestions} 題)`;
+            stageTitleEl.textContent = `階段${stageNames[currentStage]}：答題挑戰 (第 ${questionIndex + 1}/${totalQ} 題)`;
             questionTextEl.textContent = currentQuestion.q;
 
             if (currentQuestion.options) {
@@ -1051,7 +1035,7 @@
                 let shuffledOpts = shuffleArray(currentQuestion.options);
                 shuffledOpts.forEach(opt => {
                     const btn = document.createElement('button');
-                    btn.className = 'pixel-font bg-slate-800 hover:bg-slate-700 border-2 border-cyan-500/60 text-cyan-200 py-3 px-4 rounded-xl text-xs md:text-sm shadow-lg cursor-pointer transition-all transform hover:scale-105';
+                    btn.className = 'pixel-font bg-slate-800 hover:bg-slate-700 border-2 border-cyan-500/60 text-cyan-200 py-2.5 px-3 rounded-xl text-xs shadow-lg cursor-pointer transition-all';
                     btn.textContent = opt;
                     btn.onclick = () => submitAnswer(opt);
                     optionsContainer.appendChild(btn);
@@ -1085,16 +1069,38 @@
 
             if (isCorrect) {
                 SoundFX.playCorrect();
-                if (player) {
-                    // Fire exactly 1 homing missile towards the current Boss
-                    player.shoot(true, boss);
-                }
-
                 score += 200;
                 coins += 10;
                 saveShopState();
                 scoreValEl.textContent = score;
                 coinValEl.textContent = `🪙 ${coins}`;
+
+                let totalQ = currentStage === 4 ? 10 : 5;
+
+                if (boss && player) {
+                    homingMissiles.push(new HomingMissile(
+                        player.x + player.width / 2,
+                        player.y,
+                        boss.x + boss.width / 2,
+                        boss.y + boss.height / 2,
+                        () => {
+                            boss.hp--;
+                            bossHpContainer.textContent = `階段 ${currentStage} Boss 血量: ${boss.hp} / ${totalQ}`;
+                            createExplosion(boss.x + boss.width / 2, boss.y + boss.height / 2, '#22c55e');
+                            if (boss.hp <= 0) {
+                                boss = null;
+                            }
+                        }
+                    ));
+                }
+
+                questionIndex++;
+                if (boss === null && questionIndex < totalQ) {
+                    boss = new QuizBoss();
+                    boss.maxHp = totalQ;
+                    boss.hp = totalQ - questionIndex;
+                }
+                loadQuestion();
             } else {
                 SoundFX.playWrong();
                 lastMistakeTip = currentQuestion.tip || `正確答案是: ${currentQuestion.correct}`;
@@ -1167,9 +1173,7 @@
 
         function startGame(mode) {
             initAudio();
-            if (bgmEnabled) {
-                startBGM();
-            }
+            if (bgmEnabled) startBGM();
             gameMode = mode;
             gameState = 'PLAYING';
             score = 0;
@@ -1181,6 +1185,7 @@
             highScore = parseInt(localStorage.getItem('space_shooter_high')) || 0;
             player = new Player();
             bullets = [];
+            homingMissiles = [];
             enemies = [];
             classicBosses = [];
             enemyBullets = [];
@@ -1193,12 +1198,12 @@
 
             if (gameMode === 'CLASSIC') {
                 quizHud.classList.add('hidden');
-                modeValEl.textContent = '經典射擊';
+                touchControls.classList.remove('hidden');
                 classicMenuBtn.classList.remove('hidden');
             } else {
                 quizHud.classList.remove('hidden');
+                touchControls.classList.add('hidden');
                 classicMenuBtn.classList.remove('hidden');
-                modeValEl.textContent = 'Boss 答題';
                 currentStage = 1;
                 questionIndex = 0;
                 initSessionQuestions();
@@ -1220,6 +1225,7 @@
             gameState = 'START';
             stopBGM();
             quizHud.classList.add('hidden');
+            touchControls.classList.add('hidden');
             gameOverScreen.classList.add('hidden');
             classicMenuBtn.classList.add('hidden');
             startScreen.classList.remove('hidden');
@@ -1330,7 +1336,7 @@
                                 continue;
                             }
 
-                            if (eb.y > canvas.height + 20 || eb.y < -20 || eb.x < -20 || eb.x > canvas.width + 20) {
+                            if (eb.y > canvas.height + 20) {
                                 enemyBullets.splice(i, 1);
                             }
                         }
@@ -1385,31 +1391,15 @@
                     let b = bullets[i];
                     b.update();
                     b.draw();
+                    if (b.y < -20) bullets.splice(i, 1);
+                }
 
-                    // Check collision with quiz Boss if in QUIZ mode
-                    if (gameMode === 'QUIZ' && boss && b instanceof HomingMissile) {
-                        let bossCenterX = boss.x + boss.width / 2;
-                        let bossCenterY = boss.y + boss.height / 2;
-                        let distToBoss = Math.hypot((b.x + b.width/2) - bossCenterX, (b.y + b.height/2) - bossCenterY);
-                        if (distToBoss < Math.max(boss.width, boss.height) / 2) {
-                            createExplosion(b.x, b.y, '#22c55e');
-                            bullets.splice(i, 1);
-                            
-                            boss.hp--;
-                            let totalStageQuestions = currentStage === 4 ? 10 : 5;
-                            bossHpContainer.textContent = `階段 ${currentStage} Boss 血量: ${Math.max(0, boss.hp)} / ${totalStageQuestions}`;
-                            
-                            if (boss.hp <= 0) {
-                                boss = null;
-                                questionIndex++;
-                                loadQuestion();
-                            }
-                            continue;
-                        }
-                    }
-
-                    if (b.y < -20 || b.y > canvas.height + 20 || b.x < -20 || b.x > canvas.width + 20) {
-                        bullets.splice(i, 1);
+                for (let i = homingMissiles.length - 1; i >= 0; i--) {
+                    let hm = homingMissiles[i];
+                    let reached = hm.update();
+                    hm.draw();
+                    if (reached) {
+                        homingMissiles.splice(i, 1);
                     }
                 }
 
