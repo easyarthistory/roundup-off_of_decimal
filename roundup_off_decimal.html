@@ -613,9 +613,9 @@
             achievementsListContainer.innerHTML = '';
             const list = [
                 { title: '🏆 萬五分成就達成獎牌', desc: '在遊戲中單局取得 15,000 分以上', unlocked: hasAchievement15k },
-                { title: '🛡️ 生存大師', desc: '在單局中生存超過 10 分鐘 (獎勵 1000 金幣)', unlocked: hasAchievement10min },
-                { title: '🎓 答題模范生', desc: '成功通關 Boss 答題模式 3 次 (獎勵 500 金幣)', unlocked: hasAchievementQuizMaster, progress: `${quizCompleteCount}/3` },
-                { title: '🔥 堅韌大師', desc: '累計參與答題模式 50 次 (獎勵 800 金幣)', unlocked: hasAchievementToughMaster, progress: `${quizPlayCount}/50` }
+                { title: '🛡️ 生存大師', desc: '在單局中生存超過 10 分鐘', unlocked: hasAchievement10min },
+                { title: '🎓 答題模范生', desc: '成功通關 Boss 答題模式 3 次', unlocked: hasAchievementQuizMaster, progress: `${quizCompleteCount}/3` },
+                { title: '🔥 堅韌大師', desc: '累計參與答題模式 50 次', unlocked: hasAchievementToughMaster, progress: `${quizPlayCount}/50` }
             ];
 
             list.forEach(item => {
