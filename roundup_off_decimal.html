@@ -30,7 +30,8 @@
 <body class="text-white h-[100dvh] w-[100vw] flex flex-col items-center justify-between relative select-none overflow-hidden">
 
     <!-- HUD -->
-    <div id="hud" class="absolute top-2 left-2 right-2 flex justify-between items-center z-30 px-2 text-[10px] md:text-sm pixel-font text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]">
+    <!-- 修改備註：加上 hidden 讓 HUD 在主頁預設隱藏，避免主頁直接見到心心 -->
+    <div id="hud" class="absolute top-2 left-2 right-2 flex justify-between items-center z-30 px-2 text-[10px] md:text-sm pixel-font text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.6)] hidden">
         <div class="flex items-center gap-1.5 md:gap-3 flex-wrap">
             <div>分數: <span id="scoreVal">0</span></div>
             <div class="hidden sm:block">最高: <span id="highScoreHudVal" class="text-yellow-400">0</span></div>
@@ -1366,6 +1367,9 @@
             startScreen.classList.add('hidden');
             gameOverScreen.classList.add('hidden');
 
+            // 修改備註：遊戲開始時顯示頂部 HUD 狀態欄（包含心心）
+            document.getElementById('hud').classList.remove('hidden');
+
             if (gameMode === 'CLASSIC') {
                 quizHud.classList.add('hidden');
                 classicMenuBtn.classList.remove('hidden');
@@ -1405,6 +1409,9 @@
             gameOverScreen.classList.add('hidden');
             classicMenuBtn.classList.add('hidden');
             startScreen.classList.remove('hidden');
+
+            // 修改備註：返回主頁時再次隱藏頂部 HUD 狀態欄
+            document.getElementById('hud').classList.add('hidden');
         }
 
         function gameLoop() {
