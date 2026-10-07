@@ -1080,6 +1080,9 @@
             } else {
                 correctStr = val.toFixed(3);
                 placeName = '千分位';
+            } else {
+                correctStr = val.toFixed(1);
+                placeName = '角';
             }
 
             return {
