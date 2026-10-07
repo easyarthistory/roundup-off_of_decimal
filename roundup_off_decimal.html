@@ -161,12 +161,17 @@
 
     <!-- Hint Modal -->
     <div id="hintModal" class="absolute inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 hidden p-3">
-        <div class="bg-slate-900 border-2 border-amber-500 p-4 rounded-2xl max-w-lg w-full text-center shadow-[0_0_40px_rgba(245,158,11,0.6)] flex flex-col items-center">
-            <h3 class="pixel-font text-amber-400 text-xs md:text-sm mb-2">💡 四捨五入學習重點指南</h3>
-            <div class="w-full max-h-[50vh] overflow-hidden rounded-xl border border-amber-500/50 mb-3 bg-black flex justify-center items-center">
-                <img src="四捨五入.jpg" alt="四捨五入提示圖" id="hintImgEl" class="max-w-full max-h-[45vh] object-contain rounded-lg" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=800&auto=format&fit=crop&q=80';">
+        <div class="bg-slate-900 border-2 border-amber-500 p-4 rounded-2xl max-w-xl w-full text-center shadow-[0_0_40px_rgba(245,158,11,0.6)] flex flex-col items-center">
+            <h3 class="pixel-font text-amber-400 text-xs md:text-sm mb-2">💡 四捨五入與小數除法動畫指南</h3>
+            <div class="w-full max-h-[50vh] overflow-hidden rounded-xl border border-amber-500/50 mb-3 bg-black flex flex-col justify-center items-center relative">
+                <img id="hintImgEl" src="29.jpg" alt="四捨五入動畫導學" class="max-w-full max-h-[45vh] object-contain rounded-lg transition-all duration-300" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=800&auto=format&fit=crop&q=80';">
             </div>
-            <p class="text-[11px] text-gray-300 mb-3">提示口訣：<strong>取至幾分位就要計多 1 行</strong>（十分位、百分位與千分位運算要點！）</p>
+            <div class="flex items-center justify-center gap-3 mb-3 w-full">
+                <button id="prevHintBtn" class="bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/50 px-3 py-1 rounded text-xs cursor-pointer">◀ 上一步</button>
+                <div id="hintStepIndicator" class="text-xs text-amber-300 font-bold">畫面 1 / 9</div>
+                <button id="nextHintBtn" class="bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/50 px-3 py-1 rounded text-xs cursor-pointer">下一步 ▶</button>
+            </div>
+            <p id="hintCaption" class="text-[11px] text-gray-300 mb-3 h-8 flex items-center justify-center">提示：點擊「下一步」觀看取至百分位的完整除法動畫拆解！</p>
             <button id="closeHintBtn" class="pixel-font bg-gradient-to-r from-amber-500 to-yellow-600 text-white px-5 py-2 rounded-xl text-xs shadow-lg cursor-pointer">
                 關閉提示
             </button>
@@ -190,8 +195,39 @@
     </footer>
 
     <script>
+        let gameState = 'START';
+        let gameMode = 'CLASSIC';
+        let score = 0;
+        let highScore = parseInt(localStorage.getItem('space_shooter_high')) || 0;
+        let lives = 3;
+        let gameTime = 0;
+        let elapsedSeconds = 0;
+        let lastBossSpawnMinute = 0;
+        let triggeredScoreBosses = {};
+        let player = null;
+        let boss = null;
+        let bullets = [];
+        let homingMissiles = [];
+        let enemies = [];
+        let classicBosses = [];
+        let enemyBullets = [];
+        let particles = [];
+        let stars = [];
+        let currentStage = 1;
+        let questionIndex = 0;
+        let sessionQuestions = null;
+        let currentQuestion = null;
+        let lastMistakeTip = '';
+
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
 
         // Web Audio Sound Engine
         let audioCtx = null;
@@ -398,286 +434,191 @@
         const hintBtn = document.getElementById('hintBtn');
         const hintModal = document.getElementById('hintModal');
         const closeHintBtn = document.getElementById('closeHintBtn');
+        const hintImgEl = document.getElementById('hintImgEl');
+        const prevHintBtn = document.getElementById('prevHintBtn');
+        const nextHintBtn = document.getElementById('nextHintBtn');
+        const hintStepIndicator = document.getElementById('hintStepIndicator');
+        const hintCaption = document.getElementById('hintCaption');
 
-        let gameState = 'START';
-        let gameMode = 'CLASSIC';
-        let score = 0;
         let coins = parseInt(localStorage.getItem('space_shooter_coins')) || 100;
-        let lives = 3;
-        let highScore = parseInt(localStorage.getItem('space_shooter_high')) || 0;
-        let gameTime = 0;
-        let elapsedSeconds = 0;
-        let maxElapsedSeconds = parseInt(localStorage.getItem('space_shooter_max_seconds')) || 0;
-        let lastBossSpawnMinute = 0;
-        let triggeredScoreBosses = { 100: false, 1500: false, 2000: false, 2500: false };
+        let currentShip = localStorage.getItem('space_shooter_ship') || 'default_ship';
+        let currentBg = localStorage.getItem('space_shooter_bg') || 'default_bg';
+        let unlockedShips = JSON.parse(localStorage.getItem('space_shooter_unlocked_ships')) || ['default_ship'];
+        let unlockedBgs = JSON.parse(localStorage.getItem('space_shooter_unlocked_bgs')) || ['default_bg'];
 
-        // Achievements state & progress
-        let quizCompleteCount = parseInt(localStorage.getItem('space_shooter_quiz_complete_count')) || 0;
         let quizPlayCount = parseInt(localStorage.getItem('space_shooter_quiz_play_count')) || 0;
+        let quizCompleteCount = parseInt(localStorage.getItem('space_shooter_quiz_complete_count')) || 0;
+        let maxElapsedSeconds = parseInt(localStorage.getItem('space_shooter_max_seconds')) || 0;
+
         let hasAchievement15k = localStorage.getItem('space_shooter_ach_15k') === 'true';
         let hasAchievement10min = localStorage.getItem('space_shooter_ach_10min') === 'true';
         let hasAchievementQuizMaster = localStorage.getItem('space_shooter_ach_quiz_master') === 'true';
         let hasAchievementToughMaster = localStorage.getItem('space_shooter_ach_tough_master') === 'true';
 
-        let currentStage = 1;
-        let questionIndex = 0;
-        let currentQuestion = null;
-        let boss = null;
-        let sessionQuestions = { stage1: [], stage2: [], stage3: [], stage4: [] };
-        let lastMistakeTip = '';
-
-        let player = null;
-        let bullets = [];
-        let homingMissiles = [];
-        let enemies = [];
-        let classicBosses = [];
-        let enemyBullets = [];
-        let particles = [];
-        let stars = [];
-
-        let shopData = {
+        const shopData = {
             ships: [
-                { id: 'default', name: '預設藍焰', price: 0, color: '#06b6d4', unlocked: true },
-                { id: 'pink', name: '極光粉紅', price: 80, color: '#ec4899', unlocked: false },
-                { id: 'gold', name: '黃金霸權', price: 150, color: '#eab308', unlocked: false },
-                { id: 'emerald', name: '翠綠雷電', price: 200, color: '#10b981', unlocked: false },
-                { id: 'crimson', name: '赤紅地獄', price: 250, color: '#ef4444', unlocked: false },
-                { id: 'obsidian', name: '黑曜幻影', price: 350, color: '#8b5cf6', unlocked: false }
+                { id: 'default_ship', name: '標準星際戰機', color: '#06b6d4', price: 0 },
+                { id: 'gold_ship', name: '黃金光速戰機', color: '#f59e0b', price: 200 },
+                { id: 'plasma_ship', name: '電漿流光戰機', color: '#ec4899', price: 500 }
             ],
             backgrounds: [
-                { id: 'default', name: '深空星海', price: 0, gradient: ['#101026', '#020208'], unlocked: true },
-                { id: 'purple', name: '星雲紫氣', price: 80, gradient: ['#2e1065', '#090314'], unlocked: false },
-                { id: 'matrix', name: '駭客矩陣', price: 150, gradient: ['#022c22', '#01110e'], unlocked: false },
-                { id: 'sunset', name: '日落星河', price: 200, gradient: ['#7c2d12', '#180703'], unlocked: false },
-                { id: 'cyberpunk', name: '霓虹賽博', price: 250, gradient: ['#831843', '#0f051d'], unlocked: false },
-                { id: 'arctic', name: '極地冰川', price: 350, gradient: ['#0f172a', '#020617'], unlocked: false }
+                { id: 'default_bg', name: '深邃宇宙', gradient: ['#101026', '#020208'], price: 0 },
+                { id: 'nebula_bg', name: '霓虹星雲', gradient: ['#3b0764', '#09090b'], price: 300 },
+                { id: 'cyber_bg', name: '賽博虛擬', gradient: ['#065f46', '#022c22'], price: 600 }
             ]
         };
 
-        let savedShop = JSON.parse(localStorage.getItem('space_shooter_shop'));
-        if (savedShop) {
-            if (savedShop.ships) {
-                shopData.ships.forEach(s => {
-                    let found = savedShop.ships.find(x => x.id === s.id);
-                    if (found) s.unlocked = found.unlocked;
-                });
-            }
-            if (savedShop.backgrounds) {
-                shopData.backgrounds.forEach(b => {
-                    let found = savedShop.backgrounds.find(x => x.id === b.id);
-                    if (found) b.unlocked = found.unlocked;
-                });
-            }
-        }
-        let currentShip = localStorage.getItem('space_shooter_equipped_ship') || 'default';
-        let currentBg = localStorage.getItem('space_shooter_equipped_bg') || 'default';
-
         function saveShopState() {
-            localStorage.setItem('space_shooter_shop', JSON.stringify(shopData));
             localStorage.setItem('space_shooter_coins', coins);
-            localStorage.setItem('space_shooter_equipped_ship', currentShip);
-            localStorage.setItem('space_shooter_equipped_bg', currentBg);
+            localStorage.setItem('space_shooter_ship', currentShip);
+            localStorage.setItem('space_shooter_bg', currentBg);
+            localStorage.setItem('space_shooter_unlocked_ships', JSON.stringify(unlockedShips));
+            localStorage.setItem('space_shooter_unlocked_bgs', JSON.stringify(unlockedBgs));
+            updateHUD();
         }
 
         function renderShop() {
             shopCoinVal.textContent = `🪙 ${coins}`;
-            coinValEl.textContent = `🪙 ${coins}`;
-
             shipShopList.innerHTML = '';
             shopData.ships.forEach(ship => {
+                const isUnlocked = unlockedShips.includes(ship.id);
                 const isEquipped = currentShip === ship.id;
                 const div = document.createElement('div');
-                div.className = `p-2.5 rounded-xl border ${isEquipped ? 'border-cyan-400 bg-cyan-950/40' : 'border-slate-700 bg-slate-800'} flex flex-col justify-between`;
+                div.className = `p-3 rounded-xl border ${isEquipped ? 'border-cyan-400 bg-cyan-950/40' : 'border-slate-700 bg-slate-800/60'} flex flex-col justify-between items-center`;
                 div.innerHTML = `
-                    <div>
-                        <div class="font-bold text-xs text-white mb-1">${ship.name}</div>
-                        <div class="text-[10px] text-gray-400 mb-1">顏色: <span style="color:${ship.color}">■■■</span></div>
-                    </div>
-                    <div>
-                        ${ship.unlocked ? 
-                            `<button ${isEquipped ? 'disabled' : ''} onclick="equipShip('${ship.id}')" class="w-full py-1 rounded text-[11px] pixel-font ${isEquipped ? 'bg-slate-700 text-gray-400' : 'bg-cyan-600 hover:bg-cyan-500 text-white cursor-pointer'}">${isEquipped ? '使用中' : '裝備'}</button>` :
-                            `<button onclick="buyShip('${ship.id}')" class="w-full py-1 rounded text-[11px] pixel-font bg-yellow-600 hover:bg-yellow-500 text-white cursor-pointer">🪙 ${ship.price} 解鎖</button>`
-                        }
-                    </div>
+                    <div class="text-xs font-bold mb-1" style="color: ${ship.color}">${ship.name}</div>
+                    <div class="text-[10px] text-gray-400 mb-2">${isUnlocked ? (isEquipped ? '已裝備' : '已擁有') : `價格: 🪙 ${ship.price}`}</div>
+                    <button class="pixel-font px-3 py-1 rounded text-[10px] cursor-pointer ${isEquipped ? 'bg-cyan-600 text-white cursor-default' : (isUnlocked ? 'bg-slate-700 hover:bg-slate-600 text-cyan-300' : 'bg-amber-600 hover:bg-amber-500 text-white')}">
+                        ${isEquipped ? '使用中' : (isUnlocked ? '裝備' : '購買')}
+                    </button>
                 `;
+                const btn = div.querySelector('button');
+                if (!isEquipped) {
+                    btn.onclick = () => {
+                        if (isUnlocked) {
+                            currentShip = ship.id;
+                            saveShopState();
+                            renderShop();
+                        } else {
+                            if (coins >= ship.price) {
+                                coins -= ship.price;
+                                unlockedShips.push(ship.id);
+                                currentShip = ship.id;
+                                saveShopState();
+                                renderShop();
+                            } else {
+                                showModal('金幣不足', '您的金幣不夠解鎖此飛船外觀！多去挑戰經典射擊或答題模式賺取金幣吧！');
+                            }
+                        }
+                    };
+                }
                 shipShopList.appendChild(div);
             });
 
             bgShopList.innerHTML = '';
             shopData.backgrounds.forEach(bg => {
+                const isUnlocked = unlockedBgs.includes(bg.id);
                 const isEquipped = currentBg === bg.id;
                 const div = document.createElement('div');
-                div.className = `p-2.5 rounded-xl border ${isEquipped ? 'border-purple-400 bg-purple-950/40' : 'border-slate-700 bg-slate-800'} flex flex-col justify-between`;
+                div.className = `p-3 rounded-xl border ${isEquipped ? 'border-purple-400 bg-purple-950/40' : 'border-slate-700 bg-slate-800/60'} flex flex-col justify-between items-center`;
                 div.innerHTML = `
-                    <div>
-                        <div class="font-bold text-xs text-white mb-1">${bg.name}</div>
-                    </div>
-                    <div>
-                        ${bg.unlocked ? 
-                            `<button ${isEquipped ? 'disabled' : ''} onclick="equipBg('${bg.id}')" class="w-full py-1 rounded text-[11px] pixel-font ${isEquipped ? 'bg-slate-700 text-gray-400' : 'bg-purple-600 hover:bg-purple-500 text-white cursor-pointer'}">${isEquipped ? '使用中' : '裝備'}</button>` :
-                            `<button onclick="buyBg('${bg.id}')" class="w-full py-1 rounded text-[11px] pixel-font bg-yellow-600 hover:bg-yellow-500 text-white cursor-pointer">🪙 ${bg.price} 解鎖</button>`
-                        }
-                    </div>
+                    <div class="text-xs font-bold mb-1 text-purple-300">${bg.name}</div>
+                    <div class="text-[10px] text-gray-400 mb-2">${isUnlocked ? (isEquipped ? '已裝備' : '已擁有') : `價格: 🪙 ${bg.price}`}</div>
+                    <button class="pixel-font px-3 py-1 rounded text-[10px] cursor-pointer ${isEquipped ? 'bg-purple-600 text-white cursor-default' : (isUnlocked ? 'bg-slate-700 hover:bg-slate-600 text-purple-300' : 'bg-amber-600 hover:bg-amber-500 text-white')}">
+                        ${isEquipped ? '使用中' : (isUnlocked ? '裝備' : '購買')}
+                    </button>
                 `;
+                const btn = div.querySelector('button');
+                if (!isEquipped) {
+                    btn.onclick = () => {
+                        if (isUnlocked) {
+                            currentBg = bg.id;
+                            saveShopState();
+                            renderShop();
+                        } else {
+                            if (coins >= bg.price) {
+                                coins -= bg.price;
+                                unlockedBgs.push(bg.id);
+                                currentBg = bg.id;
+                                saveShopState();
+                                renderShop();
+                            } else {
+                                showModal('金幣不足', '您的金幣不夠解鎖此太空背景主題！');
+                            }
+                        }
+                    };
+                }
                 bgShopList.appendChild(div);
             });
         }
 
-        window.equipShip = function(id) {
-            currentShip = id;
-            saveShopState();
-            renderShop();
-        };
+        openShopBtn.onclick = () => { renderShop(); shopModal.classList.remove('hidden'); };
+        startShopBtn.onclick = () => { renderShop(); shopModal.classList.remove('hidden'); };
+        closeShopBtn.onclick = () => { shopModal.classList.add('hidden'); };
 
-        window.buyShip = function(id) {
-            let ship = shopData.ships.find(s => s.id === id);
-            if (ship && coins >= ship.price) {
-                coins -= ship.price;
-                ship.unlocked = true;
-                currentShip = ship.id;
-                saveShopState();
-                renderShop();
-            }
-        };
-
-        window.equipBg = function(id) {
-            currentBg = id;
-            saveShopState();
-            renderShop();
-        };
-
-        window.buyBg = function(id) {
-            let bg = shopData.backgrounds.find(b => b.id === id);
-            if (bg && coins >= bg.price) {
-                coins -= bg.price;
-                bg.unlocked = true;
-                currentBg = bg.id;
-                saveShopState();
-                renderShop();
-            }
-        };
-
-        openShopBtn.addEventListener('click', () => { renderShop(); shopModal.classList.remove('hidden'); });
-        startShopBtn.addEventListener('click', () => { renderShop(); shopModal.classList.remove('hidden'); });
-        closeShopBtn.addEventListener('click', () => { shopModal.classList.add('hidden'); });
-
-        function renderAchievementsModal() {
+        function renderAchievements() {
             achievementsListContainer.innerHTML = '';
-            
-            let currentHighScore = Math.max(score, highScore);
-            let currentMinutes = Math.floor(elapsedSeconds / 60);
-            let maxMinutes = Math.max(Math.floor(maxElapsedSeconds / 60), currentMinutes);
-
-            const achList = [
-                {
-                    title: '🏆 萬五分高分挑戰',
-                    desc: '在任一遊戲模式中單局總得分達到 15,000 分以上。',
-                    unlocked: hasAchievement15k,
-                    progress: `(最高紀錄: ${currentHighScore} 分)`
-                },
-                {
-                    title: '🛡️ 生存大師 (10分鐘)',
-                    desc: '在遊戲中存活超過 10 分鐘，解鎖隱藏 1000 金幣獎勵！',
-                    unlocked: hasAchievement10min,
-                    progress: `(最高紀錄: ${maxMinutes} 分鐘)`
-                },
-                {
-                    title: '🎓 答題模范生',
-                    desc: '累計完成所有答題模式階段並擊敗 Boss 3次。',
-                    unlocked: hasAchievementQuizMaster,
-                    progress: `(${Math.min(quizCompleteCount, 3)} / 3)`
-                },
-                {
-                    title: '🔥 堅韌大師',
-                    desc: '堅持遊玩並開始答題模式達 50 次，解鎖尊榮不屈頭銜！',
-                    unlocked: hasAchievementToughMaster,
-                    progress: `(${Math.min(quizPlayCount, 50)} / 50)`
-                }
+            const list = [
+                { title: '🏆 萬五分成就達成獎牌', desc: '在遊戲中單局取得 15,000 分以上', unlocked: hasAchievement15k },
+                { title: '🛡️ 生存大師', desc: '在單局中生存超過 10 分鐘 (獎勵 1000 金幣)', unlocked: hasAchievement10min },
+                { title: '🎓 答題模范生', desc: '成功通關 Boss 答題模式 3 次 (獎勵 500 金幣)', unlocked: hasAchievementQuizMaster, progress: `${quizCompleteCount}/3` },
+                { title: '🔥 堅韌大師', desc: '累計參與答題模式 50 次 (獎勵 800 金幣)', unlocked: hasAchievementToughMaster, progress: `${quizPlayCount}/50` }
             ];
 
-            achList.forEach(ach => {
-                const item = document.createElement('div');
-                item.className = `p-3 rounded-xl border flex items-center justify-between ${ach.unlocked ? 'border-emerald-500 bg-emerald-950/30' : 'border-slate-700 bg-slate-800/60'}`;
-                item.innerHTML = `
+            list.forEach(item => {
+                const div = document.createElement('div');
+                div.className = `p-3 rounded-xl border ${item.unlocked ? 'border-emerald-500/80 bg-emerald-950/30' : 'border-slate-700 bg-slate-800/50'} flex justify-between items-center`;
+                div.innerHTML = `
                     <div>
-                        <div class="font-bold text-xs md:text-sm ${ach.unlocked ? 'text-emerald-300' : 'text-gray-400'} mb-1">${ach.title} <span class="text-[11px] font-normal text-cyan-400">${ach.progress}</span></div>
-                        <div class="text-[11px] text-gray-300">${ach.desc}</div>
+                        <div class="text-xs font-bold ${item.unlocked ? 'text-emerald-300' : 'text-gray-400'}">${item.title}</div>
+                        <div class="text-[10px] text-gray-400 mt-0.5">${item.desc} ${item.progress ? `(${item.progress})` : ''}</div>
                     </div>
-                    <div>
-                        <span class="text-xs px-2.5 py-1 rounded-full font-bold ${ach.unlocked ? 'bg-emerald-500 text-black' : 'bg-slate-700 text-gray-400'}">
-                            ${ach.unlocked ? '已解鎖 ✓' : '未解鎖'}
-                        </span>
+                    <div class="pixel-font text-[10px] px-2.5 py-1 rounded-full ${item.unlocked ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-gray-400'}">
+                        ${item.unlocked ? '已解鎖' : '未解鎖'}
                     </div>
                 `;
-                achievementsListContainer.appendChild(item);
+                achievementsListContainer.appendChild(div);
             });
         }
 
-        openAchievementsBtn.addEventListener('click', () => {
-            renderAchievementsModal();
-            achievementsModal.classList.remove('hidden');
-        });
-        closeAchievementsBtn.addEventListener('click', () => {
-            achievementsModal.classList.add('hidden');
-        });
+        openAchievementsBtn.onclick = () => { renderAchievements(); achievementsModal.classList.remove('hidden'); };
+        closeAchievementsBtn.onclick = () => { achievementsModal.classList.add('hidden'); };
 
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight - (gameMode === 'QUIZ' ? quizHud.offsetHeight : 0);
-            if (player) {
-                player.x = canvas.width / 2 - player.width / 2;
-            }
+        const hintImages = ["29.jpg", "30.jpg", "31.jpg", "32.jpg", "33.jpg", "34.jpg", "35.jpg", "36.jpg", "37.jpg"];
+        const hintCaptions = [
+            "畫面 1：了解 1 ÷ 3（答案取至百分位）的基本直式與位值對照。",
+            "畫面 2：找出百分位與直式計算中需要檢視的小數位。",
+            "畫面 3：除法除不盡時，發覺「未停得住」的規律！",
+            "畫面 4：四捨五入口訣：取至幾分位就要計多 1 行。",
+            "畫面 5：動畫演練：進一步觀察小數點後第三位（千分位）。",
+            "畫面 6：動畫演練：檢查大於或等於 5 的進位條件。",
+            "畫面 7：動畫演練：確認十分位與百分位的精確調整。",
+            "畫面 8：動畫演練：總結計算步驟與小數取捨要點。",
+            "畫面 9：完成！成功掌握四捨五入與應用短答題技巧。"
+        ];
+        let currentHintIdx = 0;
+
+        function updateHintDisplay() {
+            hintImgEl.src = hintImages[currentHintIdx];
+            hintStepIndicator.textContent = `畫面 ${currentHintIdx + 1} / ${hintImages.length}`;
+            hintCaption.textContent = hintCaptions[currentHintIdx];
         }
-        window.addEventListener('resize', resizeCanvas);
 
-        const keys = { ArrowLeft: false, ArrowRight: false, Space: false };
-        let touchX = null;
-        let isMouseDown = false;
-        let mouseX = canvas.width / 2;
-
-        window.addEventListener('keydown', e => {
-            initAudio();
-            if (gameMode === 'CLASSIC') {
-                if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.ArrowLeft = true;
-                if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.ArrowRight = true;
-                if (e.code === 'Space') keys.Space = true;
-            }
+        prevHintBtn.addEventListener('click', () => {
+            currentHintIdx = (currentHintIdx - 1 + hintImages.length) % hintImages.length;
+            updateHintDisplay();
         });
 
-        window.addEventListener('keyup', e => {
-            if (gameMode === 'CLASSIC') {
-                if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.ArrowLeft = false;
-                if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.ArrowRight = false;
-                if (e.code === 'Space') keys.Space = false;
-            }
+        nextHintBtn.addEventListener('click', () => {
+            currentHintIdx = (currentHintIdx + 1) % hintImages.length;
+            updateHintDisplay();
         });
 
-        canvas.addEventListener('mousemove', e => {
-            if (gameMode === 'CLASSIC') {
-                mouseX = e.clientX;
-                isMouseDown = true;
-            }
+        hintBtn.addEventListener('click', () => {
+            currentHintIdx = 0;
+            updateHintDisplay();
+            hintModal.classList.remove('hidden');
         });
-
-        canvas.addEventListener('touchmove', e => {
-            initAudio();
-            if (gameMode === 'CLASSIC' && e.touches.length > 0) {
-                touchX = e.touches[0].clientX;
-            }
-        }, { passive: true });
-
-        canvas.addEventListener('touchstart', e => {
-            initAudio();
-            if (gameMode === 'CLASSIC' && e.touches.length > 0) {
-                touchX = e.touches[0].clientX;
-            }
-        }, { passive: true });
-
-        canvas.addEventListener('touchend', () => {
-            touchX = null;
-        });
-
-        hintBtn.addEventListener('click', () => { hintModal.classList.remove('hidden'); });
         closeHintBtn.addEventListener('click', () => { hintModal.classList.add('hidden'); });
 
         function initStars() {
@@ -995,50 +936,122 @@
 
         const rawStage1Bank = [
             { q: "將金額 $58.24 取至角", correct: "58.2", tip: "取至角即十分位。$58.24 的百分位是 4 (< 5)，故捨去得 $58.2。" },
-            { q: "將金額 $103.76 取至角", correct: "103.8", tip: "取至角即十分位。$103.76 的百分位是 6 (>= 5)，故進位得 $103.8。" },
-            { q: "將重量 12.45 kg 取至十分位", correct: "12.5", tip: "取至十分位。12.45 的百分位是 5，故進位得 12.5 kg。" },
-            { q: "將長度 7.82 m 取至十分位", correct: "7.8", tip: "取至十分位。7.82 的百分位是 2 (< 5)，故捨去得 7.8 m。" },
-            { q: "將距離 45.67 km 取至十分位", correct: "45.7", tip: "取至十分位。45.67 的百分位是 7 (>= 5)，故進位得 45.7 km。" },
-            { q: "將金額 $89.33 取至角", correct: "89.3", tip: "取至角即十分位。$89.33 的百分位是 3 (< 5)，故捨去得 $89.3。" },
-            { q: "將重量 3.18 kg 取至十分位", correct: "3.2", tip: "取至十分位。3.18 的百分位是 8 (>= 5)，故進位得 3.2 kg。" }
+            { q: "將 12.045  取至百分位", correct: "12.05", tip: "取至百分位。12.045 的千分位是 5 (>= 5)，故進位得 12.05 。" },
+            { q: "將金額 $103.76 取至元", correct: "104", tip: "取至元即個位。$103.76 的百分位是 7 (>= 5)，故進位得 $104。" },
+            { q: "將 5.30281 取至千分位是？", correct: "5.303", tip: "取至千分位，萬分位是 8 (>= 5)，故進位得 5.343。" },
+            { q: "將金額 $1050.0524 取至角", correct: "1050.1", tip: "取至十分位。1050.0524 的百分位是 5 (>= 5)，故進位得 $1050.1。" }, 
+            { q: "將 45.6078  取至百分位", correct: "45.61", tip: "取至百分位。45.6078 的千分位是 7 (>= 5)，故進位得 45.68 。" },
+            { q: "將金額 $89.803 取至角", correct: "89.8", tip: "取至角即十分位。$89.803 的百分位是 0 (< 5)，故捨去得 $89.8。" },
+            { q: "將 3.18 取至十分位", correct: "3.2", tip: "取至十分位。3.18 的百分位是 8 (>= 5)，故進位得 3.2 。"  },
+            { q: "將 0.43902 取至千分位是？", correct: "0.439", tip: "取至千分位，萬分位是 0 (< 5)，故捨去得 0.439。" },
+            { q: "將金額 $314.092 取至元", correct: "314", tip: "取至個位。314.092 的十分位是 0 (>= 5)，故進位得 $314。"  },
+            { q: "將 3.4862 取至十分位是？", correct: "3.5", tip: "取至十分位，百分位是 8 (>= 5)，故進位得 3.5。" },
+            { q: "將 0.726 取至百分位是？", correct: "0.73", tip: "取至百分位，千分位是 6 (>= 5)，故進位得 0.73。" },
+            { q: "將金額 $7.2341 取至角是？", correct: "7.2", tip: "取至角即十分位，百分位是 3 (< 5)，故捨去得 7.2。" },
+            { q: "將 4.02345 取至千分位是？", correct: "4.823", tip: "取至千分位，萬分位是 4 (< 5)，故捨去得 4.023。" },
+            { q: "將金額 $14.509 取至角是？", correct: "14.5", tip: "取至角即十分位，百分位是 0 (< 5)，故捨去得 14.5。" },
+            { q: "將 2.134 取至個位是？", correct: "2", tip: "取至個位，十分位是 1 (< 5)，故捨去得 2。" },
+            { q: "將 19.87326 取至千分位是？", correct: "19.873", tip: "取至千分位，萬分位是 2 (< 5)，故捨去得 19.873。" },
+            { q: "將 7.82  取至十分位", correct: "7.8", tip: "取至十分位。7.82 的百分位是 2 (< 5)，故捨去得 7.8 。" },
         ];
 
         const rawStage2Bank = [
-            { q: "2 ÷ 7 = 0.29，這小數是取至甚麼位值？", options: ["個位", "十位", "十分位", "百分位"], correct: "百分位", tip: "0.29 小數點後第二位是 9，代表百分位。" },
-            { q: "4 ÷ 9 = 0.44，這小數是取至甚麼位值？", options: ["個位", "十分位", "百分位", "萬分位"], correct: "百分位", tip: "0.44 小數點後第二位是 4，代表百分位。" },
-            { q: "1 ÷ 6 = 0.167，這小數是取至甚麼位值？", options: ["個位", "十分位", "百分位", "千分位"], correct: "千分位", tip: "0.167 小數點後第三位是 7，代表千分位。" },
-            { q: "5 ÷ 7 = 0.714，這小數是取至甚麼位值？", options: ["十位", "十分位", "百分位", "千分位"], correct: "千分位", tip: "0.714 小數點後第三位是 4，代表千分位。" },
-            { q: "3 ÷ 8 = 0.375，這小數是取至甚麼位值？", options: ["個位", "十分位", "百分位", "千分位"], correct: "千分位", tip: "0.375 小數點後第三位是 5，代表千分位。" },
-            { q: "3 ÷ 11 = 0.27，這小數是取至甚麼位值？", options: ["個位", "十分位", "百分位", "千分位"], correct: "百分位", tip: "0.27 小數點後第二位是 7，代表百分位。" }
+            { q: "2 ÷ 7 = 0.29 答案是取至什麼位值？", options: ["十分位", "百分位", "千分位", "個位"], correct: "百分位", tip: "2 ÷ 7 = 0.2857…，結果寫成 0.29 是取至百分位（小數點後第二位） },
+            { q: "4 ÷ 9 = 0.4 答案是取至什麼位值？", options: ["十分位", "百分位", "千分位", "個位"], correct: "十分位", tip: "4 ÷ 9 = 0.4444…，結果寫成 0.4 是取至十分位（小數點後第一位） },
+            { q: "4 ÷ 7 = 0.571 答案是取至什麼位值？", options: ["十分位", "百分位", "千分位", "萬分位"], correct: "千分位", tip: "4 ÷ 7 = 0.5714…，結果寫成 0.571 是取至千分位（小數點後第三位）},
+            { q: "2 ÷ 3 = 0.67 答案是取至什麼位值？", options: ["個位", "十分位", "百分位", "千分位"], correct: "百分位", tip: "2 ÷ 3 = 0.666…，結果寫成 0.67 是取至百分位（小數點後第二位）},
+            { q: "15 ÷ 4 = 3.8 答案是取至什麼位值？", options: ["個位", "十分位", "百分位", "千分位"], correct: "十分位", tip: "15 ÷ 4 = 3.75，若寫成 3.8 是取至十分位（小數點後第一位）},
+            { q: "22 ÷ 7 = 3.14 答案是取至什麼位值？", options: ["十分位", "百分位", "千分位", "萬分位"], correct: "百分位", tip: "22 ÷ 7 = 3.1428…，結果寫成 3.14 是取至百分位（小數點後第二位）},
+            { q: "7 ÷ 9 = 0.8 答案是取至什麼位值？", options: ["個位", "十分位", "百分位", "千分位"], correct: "十分位", tip: "7 ÷ 9 = 0.777…，結果寫成 0.8 是取至十分位（小數點後第一位） },
+            { q: "12 ÷ 5 = 2 答案是取至什麼位值？", options: ["個位", "十分位", "百分位", "千分位"], correct: "個位", tip: "12 ÷ 5 = 2.4，結果寫成 2 是取至個位（整數部分）},
+            { q: "1 ÷ 6 = 0.167 答案是取至什麼位值？", options: ["十分位", "百分位", "千分位", "萬分位"], correct: "千分位", tip: "1 ÷ 6 = 0.1666…，結果寫成 0.167 是取至千分位（小數點後第三位） },
+            { q: "17 ÷ 5 = 3.4 答案是取至什麼位值？", options: ["個位", "十分位", "百分位", "千分位"], correct: "十分位", tip: "17 ÷ 5 = 3.4，精確值剛好到十分位（小數點後第一位）},
+            { q: "13 ÷ 6 = 2.167 答案是取至什麼位值？", options: ["十分位", "百分位", "千分位", "萬分位"], correct: "千分位", tip: "13 ÷ 6 = 2.1666…，結果寫成 2.167 是取至千分位（小數點後第三位）},
+            { q: "7 ÷ 12 = 0.58 答案是取至什麼位值？", options: ["十分位", "百分位", "千分位", "萬分位"], correct: "百分位", tip: "7 ÷ 12 = 0.5833…，結果寫成 0.58 是取至百分位（小數點後第二位）},
+            { q: "3 ÷ 11 = 0.3，答案是取至什麼位值？", options: ["十分位", "百分位", "千分位", "個位"], correct: "十分位", tip: "3 ÷ 11 = 0.2727…，結果寫成 0.3 是取至十分位（小數點後第一位）。" }
         ];
 
         const rawStage3Bank = [
-            { q: "2 ÷ 7 = 0.29，為了取至百分位，我需要用直式計算到哪一個數位？", correct: "小數點後三位", tip: "取至百分位時，我們必須計算到下一位（即千分位／小數點後三位）以進行四捨五入。" },
-            { q: "1 ÷ 7 (答案取至百分位)", correct: "0.14", tip: "1 ÷ 7 = 0.142... 取至百分位為 0.14。" },
-            { q: "2 ÷ 7 (答案取至百分位)", correct: "0.29", tip: "2 ÷ 7 = 0.285... 取至百分位為 0.29。" },
-            { q: "4 ÷ 7 (答案取至百分位)", correct: "0.57", tip: "4 ÷ 7 = 0.571... 取至百分位為 0.57。" },
-            { q: "5 ÷ 7 (答案取至百分位)", correct: "0.71", tip: "5 ÷ 7 = 0.714... 取至百分位為 0.71。" },
-            { q: "1 ÷ 6 (答案取至百分位)", correct: "0.17", tip: "1 ÷ 6 = 0.166... 取至百分位為 0.17。" }
+            { isDynamicCalc: true, tip: "將隨機分數進行直式計算並四捨五入。" },
+            { q: "4 ÷ 7 = 0.571，為了取至千分位，直式計算時必須除到小數點後第幾位？", options: ["小數點後一位", "小數點後兩位", "小數點後三位", "小數點後四位"], correct: "小數點後四位", tip: "取至千分位（小數點後三位），必須計算到下一位（即小數點後四位／萬分位）以便四捨五入。" },
+            { q: "5 ÷ 6 = 0.8，為了取至十分位，直式計算時必須除到小數點後第幾位？", options: ["小數點後一位", "小數點後兩位", "小數點後三位", "小數點後四位"], correct: "小數點後兩位", tip: "取至十分位（小數點後一位），必須計算到下一位（即小數點後兩位／百分位）以便四捨五入。" },
+            { isDynamicCalc: true, tip: "將隨機分數進行直式計算並四捨五入。" },
+            { q: "1 ÷ 3 = 0.333 為了取至千分位，直式計算時必須除到小數點後第幾位？", options: ["小數點後一位", "小數點後兩位", "小數點後三位", "小數點後個位"], correct: "小數點後三位", tip: "取至百分位，直式須計算到小數點後三位來判斷是否進位。" },
+            { isDynamicCalc: true, tip: "將隨機分數進行直式計算並四捨五入。" },
+            { q: "3 ÷ 11 = 0.27，為了取至百分位，直式計算時必須除到小數點後第幾位？", options: ["小數點後一位", "小數點後兩位", "小數點後三位", "小數點後四位"], correct: "小數點後三位", tip: "取至百分位（小數點後兩位），必須計算到下一位（即小數點後三位／千分位）以便四捨五入。" },
+            { q: "2 ÷ 3 = 0.67，為了取至百分位，直式計算時必須除到小數點後第幾位？", options: ["小數點後一位", "小數點後兩位", "小數點後三位", "小數點後四位"], correct: "小數點後三位", tip: "取至百分位（小數點後兩位），必須計算到下一位（即小數點後三位／千分位）以便四捨五入。" },
+            { q: "1 ÷ 3 = 0.333 為了取至千分位，直式計算時必須除到小數點後第幾位？", options: ["小數點後一位", "小數點後兩位", "小數點後三位", "小數點後個位"], correct: "小數點後三位", tip: "取至百分位，直式須計算到小數點後三位來判斷是否進位。" },
+            { isDynamicCalc: true, tip: "將隨機分數進行直式計算並四捨五入。" },
+            { q: "5 ÷ 6 = 0.8，為了取至十分位，直式計算時必須除到小數點後第幾位？", options: ["小數點後一位", "小數點後兩位", "小數點後三位", "小數點後四位"], correct: "小數點後兩位", tip: "取至十分位（小數點後一位），必須計算到下一位（即小數點後兩位／百分位）以便四捨五入。" },
+            { isDynamicCalc: true, tip: "將隨機分數進行直式計算並四捨五入。" },
+            { q: "19 ÷ 4 = 5，為了取至個位，直式計算時必須除到小數點後第幾位？", options: ["小數點後一位", "小數點後兩位", "小數點後三位", "小數點後四位"], correct: "小數點後一位", tip: "取至個位（整數），必須計算到下一位（即小數點後一位／十分位）以便四捨五入。" },
+            { q: "1 ÷ 3 = 0.333 為了取至千分位，直式計算時必須除到小數點後第幾位？", options: ["小數點後一位", "小數點後兩位", "小數點後三位", "小數點後個位"], correct: "小數點後三位", tip: "取至百分位，直式須計算到小數點後三位來判斷是否進位。" },
+            { isDynamicCalc: true, tip: "將隨機分數進行直式計算並四捨五入。" },
+            { q: "17 ÷ 5 = 3，為了取至個位，直式計算時必須除到小數點後第幾位？", options: ["小數點後一位", "小數點後兩位", "小數點後三位", "小數點後四位"], correct: "小數點後一位", tip: "取至個位（整數），必須計算到下一位（即小數點後一位／十分位）以便四捨五入。" },
+            { isDynamicCalc: true, tip: "將隨機分數進行直式計算並四捨五入。" },
+            { q: "10 ÷ 7 = 1.4，為了取至十分位，直式計算時必須除到小數點後第幾位？", options: ["小數點後一位", "小數點後兩位", "小數點後三位", "小數點後四位"], correct: "小數點後兩位", tip: "取至十分位（小數點後一位），必須計算到下一位（即小數點後兩位／百分位）以便四捨五入。" },
+            { isDynamicCalc: true, tip: "將隨機分數進行直式計算並四捨五入。" },
+            { q: "3 ÷ 13 = 0.231，為了取至千分位，直式計算時必須除到小數點後第幾位？", options: ["小數點後一位", "小數點後兩位", "小數點後三位", "小數點後四位"], correct: "小數點後四位", tip: "取至千分位（小數點後三位），必須計算到下一位（即小數點後四位／萬分位）以便四捨五入。" },
+            { isDynamicCalc: true, tip: "將隨機分數進行直式計算並四捨五入。" },
+            { isDynamicCalc: true, tip: "將隨機分數進行直式計算並四捨五入。" }
         ];
 
         function shuffleArray(arr) {
-            let a = [...arr];
-            for (let i = a.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [a[i], a[j]] = [a[j], a[i]];
+            let shuffled = [...arr];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                let j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
             }
-            return a;
+            return shuffled;
+        }
+
+        function generateDynamicCalcQuestion() {
+            const denominators = [3, 7, 9, 11, 13, 15];
+            const numerators = [1, 2, 3, 4, 5, 6, 7, 8, 17, 19];
+            let d = denominators[Math.floor(Math.random() * denominators.length)];
+            let n = numerators[Math.floor(Math.random() * numerators.length)];
+            if (n >= d) n = d - 1; if (n <= 0) n = 1;
+            
+            let rand = Math.random();
+            let modeType = rand < 1/3 ? 'tenth' : (rand < 2/3 ? 'hundredth' : 'thousandth');
+            let val = n / d;
+            let correctStr;
+            let placeName;
+
+            if (modeType === 'tenth') {
+                correctStr = val.toFixed(1);
+                placeName = '十分位';
+            } else if (modeType === 'tenth') {
+                correctStr = val.toFixed(1);
+                placeName = '角';
+            } else if (modeType === 'hundredth') {
+                correctStr = val.toFixed(2);
+                placeName = '百分位';
+            } else {
+                correctStr = val.toFixed(3);
+                placeName = '千分位';
+
+            return {
+                q: `計算 ${n} ÷ ${d}，並將答案取至${placeName}：`,
+                correct: correctStr,
+                tip: `${n} ÷ ${d} = ${val.toFixed(4)}…，取至${placeName}為 ${correctStr}。`
+            };
         }
 
         function initSessionQuestions() {
             let s1 = shuffleArray(rawStage1Bank).slice(0, 5);
             let s2 = shuffleArray(rawStage2Bank).slice(0, 5);
-            let s3 = shuffleArray(rawStage3Bank).slice(0, 5);
+            
+            let s3Base = shuffleArray(rawStage3Bank.filter(item => !item.isDynamicCalc)).slice(0, 3);
+            let s3Calc1 = generateDynamicCalcQuestion();
+            let s3Calc2 = generateDynamicCalcQuestion();
+            let s3 = shuffleArray([...s3Base, s3Calc1, s3Calc2]);
 
             let chosenS1 = shuffleArray(rawStage1Bank).slice(0, 3);
             let chosenS2 = shuffleArray(rawStage2Bank).slice(0, 3);
-            let chosenS3 = shuffleArray(rawStage3Bank).slice(0, 3);
-            let extraPool = [...rawStage1Bank, ...rawStage2Bank, ...rawStage3Bank];
+            let s3Filtered = rawStage3Bank.filter(item => !item.isDynamicCalc);
+            let chosenS3 = shuffleArray([...s3Filtered, generateDynamicCalcQuestion()]).slice(0, 3);
+            let extraPool = [...rawStage1Bank, ...rawStage2Bank, ...s3Filtered];
             let chosenExtra = shuffleArray(extraPool).slice(0, 1);
             let s4 = shuffleArray([...chosenS1, ...chosenS2, ...chosenS3, ...chosenExtra]);
 
@@ -1094,11 +1107,19 @@
             }
 
             currentQuestion = currentBank[questionIndex];
+            if (currentQuestion.isDynamicCalc) {
+                let dyn = generateDynamicCalcQuestion();
+                currentQuestion.q = dyn.q;
+                currentQuestion.correct = dyn.correct;
+                currentQuestion.tip = dyn.tip;
+                delete currentQuestion.isDynamicCalc;
+            }
+
             let totalQ = currentStage === 4 ? 10 : 5;
             bossHpContainer.textContent = `階段 ${currentStage} Boss 血量: ${boss ? boss.hp : totalQ} / ${totalQ}`;
             
             let stageNames = ['', '一', '二', '三', '四'];
-            stageTitleEl.textContent = `階段${stageNames[currentStage]}：答題挑戰 (第 ${questionIndex + 1}/${totalQ} 題)`;
+            stageTitleEl.textContent = `階段${stageNames[currentStage]}：答題挑戰 (第 ${questionIndex + 1}/${totalQ} 题)`;
             questionTextEl.textContent = currentQuestion.q;
 
             if (currentQuestion.options) {
