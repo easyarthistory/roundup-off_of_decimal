@@ -504,14 +504,20 @@
 
         const shopData = {
             ships: [
-                { id: 'default_ship', name: '標準星際戰機', color: '#06b6d4', price: 0 },
-                { id: 'gold_ship', name: '黃金光速戰機', color: '#f59e0b', price: 200 },
-                { id: 'plasma_ship', name: '電漿流光戰機', color: '#ec4899', price: 500 }
+                { id: 'default', name: '預設藍焰', price: 0, color: '#06b6d4', unlocked: true },
+                { id: 'pink', name: '極光粉紅', price: 80, color: '#ec4899', unlocked: false },
+                { id: 'gold', name: '黃金霸權', price: 150, color: '#eab308', unlocked: false },
+                { id: 'emerald', name: '翠綠雷電', price: 200, color: '#10b981', unlocked: false },
+                { id: 'crimson', name: '赤紅地獄', price: 250, color: '#ef4444', unlocked: false },
+                { id: 'obsidian', name: '黑曜幻影', price: 350, color: '#8b5cf6', unlocked: false }
             ],
             backgrounds: [
-                { id: 'default_bg', name: '深邃宇宙', gradient: ['#101026', '#020208'], price: 0 },
-                { id: 'nebula_bg', name: '霓虹星雲', gradient: ['#3b0764', '#09090b'], price: 300 },
-                { id: 'cyber_bg', name: '賽博虛擬', gradient: ['#065f46', '#022c22'], price: 600 }
+                { id: 'default', name: '深空星海', price: 0, gradient: ['#101026', '#020208'], unlocked: true },
+                { id: 'purple', name: '星雲紫氣', price: 80, gradient: ['#2e1065', '#090314'], unlocked: false },
+                { id: 'matrix', name: '駭客矩陣', price: 150, gradient: ['#022c22', '#01110e'], unlocked: false },
+                { id: 'sunset', name: '日落星河', price: 200, gradient: ['#7c2d12', '#180703'], unlocked: false },
+                { id: 'cyberpunk', name: '霓虹賽博', price: 250, gradient: ['#831843', '#0f051d'], unlocked: false },
+                { id: 'arctic', name: '極地冰川', price: 350, gradient: ['#0f172a', '#020617'], unlocked: false }
             ]
         };
 
